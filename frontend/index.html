@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SafarX — Shared Rides, Sawangi ↔ Wardha</title>
+  <meta name="description" content="SafarX is a shared-seat ride booking platform for the Sawangi ↔ Wardha corridor. Book rides instantly." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/design-system.css" />
+</head>
+<body>
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="app-header">
+    <div class="brand-logo" onclick="window.location.reload()" style="cursor:pointer;">
+      <div class="brand-badge">⚡</div>
+      <span>Safar<strong style="color:var(--orange);">X</strong></span>
+      <span class="brand-route-tag">Sawangi ↔ Wardha</span>
+    </div>
+
+    <div style="position: relative;">
+      <div class="user-profile-widget" id="user-profile-trigger" style="cursor: pointer; user-select: none;">
+        <div style="text-align: right; line-height: 1.2;">
+          <div id="header-user-name" style="font-weight: 800; font-size: 0.88rem;">Jay Thakkar</div>
+          <div id="header-user-role" style="font-size: 0.7rem; color: var(--orange); font-weight: 800;">CUSTOMER</div>
+        </div>
+        <div id="header-user-avatar" class="user-avatar-badge">J</div>
+      </div>
+
+      <!-- Profile Dropdown -->
+      <div class="profile-dropdown-menu" id="profile-dropdown">
+        <div style="padding: 0.5rem 0.85rem; border-bottom: 1px solid var(--border-soft); margin-bottom: 0.4rem;">
+          <div id="dropdown-user-name" style="font-weight: 800; font-size: 0.95rem;">Jay Thakkar</div>
+          <div id="dropdown-user-contact" style="font-size: 0.74rem; color: var(--text-light);">jay@example.com</div>
+          <div style="margin-top: 0.3rem;">
+            <span id="dropdown-user-role-badge" class="badge badge-success">CUSTOMER</span>
+          </div>
+        </div>
+
+        <button class="profile-dropdown-item" onclick="window.location.href='/login.html'">
+          <span>👤</span> <span>Passenger Login</span>
+        </button>
+        <button class="profile-dropdown-item" onclick="window.location.href='/driver-login.html'">
+          <span>🚗</span> <span>Driver Login</span>
+        </button>
+        <button class="profile-dropdown-item" onclick="window.SafarXApp.openAuthModal('demo')">
+          <span>🔄</span> <span>Switch Role</span>
+        </button>
+        <div style="border-top: 1px solid var(--border-soft); margin: 0.4rem 0;"></div>
+        <button class="profile-dropdown-item" onclick="window.location.href='/admin-login.html'" style="color: var(--info);">
+          <span>🛡️</span> <span>Admin Login</span>
+        </button>
+        <div style="border-top: 1px solid var(--border-soft); margin: 0.4rem 0;"></div>
+        <button class="profile-dropdown-item" style="color: var(--danger);" onclick="window.SafarXAuth.logout()">
+          <span>🚪</span> <span>Log Out</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main class="main-wrapper">
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- 1. CUSTOMER VIEW -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section id="platform-customer" class="platform-view active">
+      <div class="mobile-container">
+
+        <!-- Hero Search Card -->
+        <div class="card" style="margin-bottom: 1.5rem; border-top: 4px solid var(--orange); text-align: center;">
+          <div style="margin-bottom: 1.25rem;">
+            <div style="font-size: 2.2rem; margin-bottom: 0.3rem;">🚗</div>
+            <h2 style="font-size: 1.3rem; font-weight: 900; color: var(--text-dark);">Where are you headed?</h2>
+            <p style="font-size: 0.82rem; color: var(--text-light); font-weight: 500; margin-top: 0.2rem;">Sawangi ↔ Wardha Shared Rides</p>
+          </div>
+
+          <form id="customer-search-form">
+            <div class="form-group">
+              <label class="form-label" for="search-pickup-stop">Pickup</label>
+              <select id="search-pickup-stop" class="form-select" required>
+                <option value="">Loading stops...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="search-drop-stop">Drop</label>
+              <select id="search-drop-stop" class="form-select" required>
+                <option value="">Loading stops...</option>
+              </select>
+            </div>
+
+            <div id="search-validation-warning" style="display:none; color:var(--danger); font-size:0.8rem; font-weight:700; margin-bottom:0.75rem; text-align:center;"></div>
+
+            <div class="form-group">
+              <label class="form-label" for="search-ride-date">Date</label>
+              <input type="date" id="search-ride-date" class="form-input" required />
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" style="padding: 0.85rem; font-size: 0.95rem; font-weight: 800;">
+              🔍 Find Rides
+            </button>
+          </form>
+        </div>
+
+        <!-- Search Results -->
+        <div id="customer-search-results" style="margin-bottom: 2rem;">
+          <div style="text-align: center; padding: 2rem 1rem; color: var(--text-light);">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🗺️</div>
+            <p style="font-weight: 600; font-size: 0.88rem;">Search above to find shared rides</p>
+          </div>
+        </div>
+
+        <!-- Booking History -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">My Bookings</h3>
+            <button class="btn btn-sm btn-secondary" onclick="window.SawangiCustomer.loadMyBookings()">Refresh</button>
+          </div>
+          <div id="customer-bookings-list">
+            <div style="text-align: center; padding: 1.5rem; color: var(--text-light);">Loading bookings...</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- 2. DRIVER VIEW -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section id="platform-driver" class="platform-view">
+      <div class="mobile-container">
+
+        <!-- Driver Profile Header -->
+        <div class="card" style="margin-bottom: 1.25rem; background: var(--orange-gradient); color: white; border: none;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div style="font-size: 0.78rem; opacity: 0.8; font-weight: 600;">SafarX Driver</div>
+              <h2 id="driver-greeting-name" style="font-size: 1.3rem; font-weight: 900; margin-top: 0.15rem;">Rahul Sharma</h2>
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.35rem;">
+                <span id="driver-status-badge" class="badge" style="background: rgba(255,255,255,0.2); color: white;">APPROVED</span>
+                <span id="driver-rating-val" style="font-size: 0.8rem; font-weight: 700;">⭐ 4.9</span>
+              </div>
+            </div>
+            <button class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);" onclick="window.SawangiDriver.openPublishModal()">+ Publish Ride</button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.15);">
+            <div>
+              <div style="font-size: 0.7rem; opacity: 0.7; font-weight: 700;">TODAY'S EARNINGS</div>
+              <div id="driver-today-earnings" style="font-size: 1.35rem; font-weight: 900;">₹240</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; opacity: 0.7; font-weight: 700;">TOTAL EARNINGS</div>
+              <div id="driver-total-earnings" style="font-size: 1.35rem; font-weight: 900;">₹8,450</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Ride Card -->
+        <div id="driver-today-ride-card" class="card" style="margin-bottom: 1.5rem; border-top: 4px solid var(--success); display:none;">
+          <div class="card-header">
+            <div>
+              <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Active Ride</div>
+              <h3 id="driver-ride-route-text" style="font-size: 1.1rem; font-weight: 900;">Sawangi → Wardha</h3>
+            </div>
+            <span id="driver-ride-status-badge" class="badge badge-success">SCHEDULED</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 0.85rem; background: var(--cream); padding: 0.75rem; border-radius: var(--radius-sm);">
+            <div>
+              <div id="driver-ride-time-text" style="font-weight: 700;">Departure: 08:30 AM</div>
+              <div id="driver-ride-seats-text" style="color: var(--text-light); font-size: 0.76rem;">Available: 3 / 4 seats</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 0.7rem; color: var(--text-light); font-weight: 700;">FARE</div>
+              <div id="driver-ride-fare-text" style="font-size: 1.2rem; font-weight: 900; color: var(--orange);">₹40</div>
+            </div>
+          </div>
+
+          <div id="driver-ride-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+        </div>
+
+        <div id="driver-no-ride-notice" class="card" style="text-align:center; padding: 2.5rem 1.5rem; margin-bottom: 1.5rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🗓️</div>
+          <h4 style="font-weight: 900; margin-bottom: 0.3rem; font-size: 1.05rem;">No Active Ride</h4>
+          <p style="font-size: 0.84rem; color: var(--text-light); margin-bottom: 1.25rem;">Publish your route to start accepting bookings</p>
+          <button class="btn btn-primary btn-sm" onclick="window.SawangiDriver.openPublishModal()">+ Publish Today's Ride</button>
+        </div>
+
+        <!-- Passengers -->
+        <div id="driver-passengers-section" style="display:none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 900;">TODAY'S PASSENGERS</h3>
+            <span class="badge badge-neutral">Segment Seats</span>
+          </div>
+          <div id="driver-passengers-list"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- 3. ADMIN VIEW -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section id="platform-admin" class="platform-view">
+
+      <!-- Admin Nav -->
+      <div style="display: flex; gap: 0.4rem; margin-bottom: 1.5rem; flex-wrap: wrap; background: var(--white); padding: 0.4rem; border-radius: var(--radius-full); border: 1px solid var(--border-soft);">
+        <button class="btn btn-sm btn-secondary admin-nav-item active" data-tab="metrics">📊 Dashboard</button>
+        <button class="btn btn-sm btn-secondary admin-nav-item" data-tab="drivers">🚗 Drivers</button>
+        <button class="btn btn-sm btn-secondary admin-nav-item" data-tab="routes">📍 Routes</button>
+        <button class="btn btn-sm btn-secondary admin-nav-item" data-tab="bookings">📋 Bookings</button>
+        <button class="btn btn-sm btn-secondary admin-nav-item" data-tab="payments">💳 Payments</button>
+        <button class="btn btn-sm btn-secondary admin-nav-item" data-tab="settings">⚙️ Settings</button>
+      </div>
+
+      <!-- Metrics Tab -->
+      <div id="admin-tab-metrics" class="admin-tab-content">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">Today's Rides</span>
+            <span id="stat-today-rides" class="stat-value">0</span>
+            <span class="stat-sub">Scheduled & Active</span>
+          </div>
+          <div class="stat-card info">
+            <span class="stat-label">Today's Bookings</span>
+            <span id="stat-today-bookings" class="stat-value">0</span>
+            <span class="stat-sub">Confirmed Seats</span>
+          </div>
+          <div class="stat-card accent">
+            <span class="stat-label">Total Revenue</span>
+            <span id="stat-total-revenue" class="stat-value">₹0</span>
+            <span class="stat-sub">Gross booking volume</span>
+          </div>
+          <div class="stat-card warning">
+            <span class="stat-label">Platform Commission</span>
+            <span id="stat-platform-commission" class="stat-value">₹0</span>
+            <span class="stat-sub">Platform net revenue</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Driver Earnings</span>
+            <span id="stat-driver-earnings" class="stat-value">₹0</span>
+            <span class="stat-sub">Disbursable to drivers</span>
+          </div>
+          <div class="stat-card accent">
+            <span class="stat-label">Active Drivers</span>
+            <span id="stat-active-drivers" class="stat-value">0</span>
+            <span class="stat-sub">Verified & Approved</span>
+          </div>
+          <div class="stat-card warning">
+            <span class="stat-label">Pending Approvals</span>
+            <span id="stat-pending-drivers" class="stat-value">0</span>
+            <span class="stat-sub">Awaiting verification</span>
+          </div>
+          <div class="stat-card danger">
+            <span class="stat-label">Cancelled / Refunds</span>
+            <span id="stat-cancelled-bookings" class="stat-value">0</span>
+            <span id="stat-refunds-count" class="stat-sub">0 refunds processed</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Recent Bookings</h3>
+            <span class="badge badge-success">Live</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Booking ID</th>
+                  <th>Customer</th>
+                  <th>Pickup ➔ Drop</th>
+                  <th>Amount</th>
+                  <th>Booking Status</th>
+                  <th>Payment Status</th>
+                </tr>
+              </thead>
+              <tbody id="admin-recent-bookings-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Drivers Tab -->
+      <div id="admin-tab-drivers" class="admin-tab-content" style="display:none;">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Driver Fleet</h3>
+            <div style="display: flex; gap: 0.4rem;">
+              <button class="btn btn-sm btn-secondary" onclick="window.SawangiAdmin.loadDrivers('ALL')">All</button>
+              <button class="btn btn-sm btn-secondary" onclick="window.SawangiAdmin.loadDrivers('PENDING')">Pending</button>
+              <button class="btn btn-sm btn-secondary" onclick="window.SawangiAdmin.loadDrivers('APPROVED')">Approved</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Driver Details</th>
+                  <th>Driving Licence</th>
+                  <th>Vehicle Details</th>
+                  <th>Rating</th>
+                  <th>Total Earnings</th>
+                  <th>Status</th>
+                  <th>Verification Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-drivers-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Routes Tab -->
+      <div id="admin-tab-routes" class="admin-tab-content" style="display:none;">
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title">Route Manager</h3>
+            <div style="display: flex; gap: 0.5rem;">
+              <select id="admin-route-picker" class="form-select" style="width: auto; padding: 0.35rem 0.75rem;"></select>
+              <button class="btn btn-sm btn-primary" onclick="document.getElementById('modal-create-route').classList.add('active')">+ Create Route</button>
+            </div>
+          </div>
+          <div id="admin-stops-container"></div>
+        </div>
+      </div>
+
+      <!-- Bookings Tab -->
+      <div id="admin-tab-bookings" class="admin-tab-content" style="display:none;">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">All Bookings</h3>
+            <button class="btn btn-sm btn-secondary" onclick="window.SawangiAdmin.loadBookings()">Refresh</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Booking No</th>
+                  <th>Customer</th>
+                  <th>Driver</th>
+                  <th>Segment Span</th>
+                  <th>Total Fare</th>
+                  <th>Split</th>
+                  <th>Status</th>
+                  <th>Payment</th>
+                </tr>
+              </thead>
+              <tbody id="admin-all-bookings-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payments Tab -->
+      <div id="admin-tab-payments" class="admin-tab-content" style="display:none;">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Payment Ledger</h3>
+            <button class="btn btn-sm btn-secondary" onclick="window.SawangiAdmin.loadPayments()">Refresh</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Razorpay Order ID</th>
+                  <th>Payment ID</th>
+                  <th>Customer</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Gateway Status</th>
+                  <th>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody id="admin-all-payments-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div id="admin-tab-settings" class="admin-tab-content" style="display:none;">
+        <div class="card" style="max-width: 620px; margin: 0 auto;">
+          <div class="card-header">
+            <h3 class="card-title">Pricing & Rules</h3>
+          </div>
+          <form id="admin-settings-form">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label class="form-label" for="setting-min-fare">Minimum Fare (₹)</label>
+                <input type="number" id="setting-min-fare" class="form-input" min="5" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="setting-max-fare">Maximum Fare (₹)</label>
+                <input type="number" id="setting-max-fare" class="form-input" max="1000" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="setting-commission-val">Platform Commission (%)</label>
+              <input type="number" id="setting-commission-val" class="form-input" min="0" max="50" required />
+              <small style="color: var(--text-light); font-size: 0.72rem;">Auto-deducted from each booking before driver credit.</small>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.84rem; cursor: pointer;">
+                <input type="checkbox" id="setting-allow-driver-adjustment" />
+                Allow drivers to adjust daily fare
+              </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top: 1.25rem;">💾 Save Settings</button>
+          </form>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- MODALS -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <!-- Customer Checkout -->
+  <div id="modal-customer-checkout" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem; font-weight: 900;">Book Your Ride</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="customer-checkout-form">
+        <div style="background: var(--cream); padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 1rem; text-align: center;">
+          <div style="font-size: 0.84rem; font-weight: 700;">
+            📍 <span id="checkout-ride-pickup" style="color:var(--orange);">Sawangi</span>
+            &nbsp;→&nbsp;
+            🎯 <span id="checkout-ride-drop" style="color:var(--success);">Wardha</span>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-light); margin-top: 0.3rem;">
+            Rate: <span id="checkout-fare-per-seat" style="font-weight: 800; color: var(--text-dark);">₹30</span> / seat
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="checkout-seats-count">Seats</label>
+          <select id="checkout-seats-count" class="form-select">
+            <option value="1">1 Seat</option>
+            <option value="2">2 Seats</option>
+            <option value="3">3 Seats</option>
+          </select>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 1.25rem 0; padding-top: 1rem; border-top: 1px solid var(--border-soft);">
+          <div style="font-weight: 800; font-size: 1rem;">Total:</div>
+          <div id="checkout-total-amount" style="font-size: 1.5rem; font-weight: 900; color: var(--orange);">₹30</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="padding: 0.85rem; font-weight: 800;">
+          Pay Securely 💳
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Razorpay Simulation -->
+  <div id="modal-razorpay-simulation" class="modal-backdrop">
+    <div class="modal-card" style="border-top: 5px solid #2b84ea; text-align: center;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <div style="background: #2b84ea; color: white; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: 900; font-size: 0.78rem;">Razorpay</div>
+          <h3 style="font-size: 1.05rem; font-weight: 800;">Payment</h3>
+        </div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div style="background: var(--cream); padding: 1.25rem; border-radius: var(--radius-sm); margin-bottom: 1rem;">
+        <div style="font-size: 0.76rem; color: var(--text-light);">ORDER: <strong id="rzp-order-id-display">order_12345</strong></div>
+        <div style="font-size: 2rem; font-weight: 900; color: var(--text-dark); margin-top: 0.3rem;" id="rzp-amount-display">₹30</div>
+      </div>
+
+      <div style="margin-bottom: 1.25rem;">
+        <div style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.84rem;">Payment Method:</div>
+        <div style="border: 2px solid var(--orange); padding: 0.65rem; border-radius: var(--radius-sm); font-weight: 700; font-size: 0.84rem;">
+          📱 UPI (GPay / PhonePe / Paytm)
+        </div>
+      </div>
+
+      <p style="font-size: 0.74rem; color: var(--text-light); margin-bottom: 1rem;">
+        🔒 HMAC SHA-256 verified transaction
+      </p>
+
+      <button class="btn btn-success btn-block" style="padding: 0.85rem; font-size: 0.92rem;" onclick="window.SawangiCustomer.handleSimulatePaymentSuccess()">
+        ✓ Complete Payment
+      </button>
+    </div>
+  </div>
+
+  <!-- Booking Confirmed -->
+  <div id="modal-booking-confirmed" class="modal-backdrop">
+    <div class="modal-card" style="text-align: center; border-top: 5px solid var(--success);">
+      <div style="font-size: 3.5rem; margin-bottom: 0.5rem;">🎉</div>
+      <h2 style="font-weight: 900; font-size: 1.35rem; margin-bottom: 0.2rem;">Booking Confirmed!</h2>
+      <p style="font-size: 0.84rem; color: var(--text-light); margin-bottom: 1.25rem;">
+        Ref: <strong id="confirm-booking-num">BK-SW-1001</strong>
+      </p>
+
+      <div style="background: var(--cream); padding: 1.5rem; border-radius: var(--radius-lg); margin-bottom: 1.25rem;">
+        <div style="font-size: 0.76rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Boarding OTP</div>
+        <div id="confirm-booking-otp" style="font-size: 2.8rem; font-weight: 900; letter-spacing: 8px; color: var(--orange); margin: 0.3rem 0;">4829</div>
+        <div id="confirm-booking-route" style="font-weight: 800; font-size: 0.92rem;">Sawangi ➔ Wardha</div>
+        <div id="confirm-booking-amount" style="font-size: 0.82rem; color: var(--text-light); margin-top: 0.2rem;">₹30 (1 seat)</div>
+      </div>
+
+      <button class="btn btn-primary btn-block" onclick="document.getElementById('modal-booking-confirmed').classList.remove('active')">
+        Done ✓
+      </button>
+    </div>
+  </div>
+
+  <!-- Driver Publish Ride -->
+  <div id="modal-driver-publish-ride" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem; font-weight: 900;">Publish Ride</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="driver-publish-ride-form">
+        <div class="form-group">
+          <label class="form-label" for="driver-publish-route">Route</label>
+          <select id="driver-publish-route" class="form-select" required></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="driver-publish-direction">Direction</label>
+          <select id="driver-publish-direction" class="form-select" required>
+            <option value="FORWARD">Sawangi ➔ Wardha</option>
+            <option value="REVERSE">Wardha ➔ Sawangi</option>
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="driver-publish-date">Date</label>
+            <input type="date" id="driver-publish-date" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="driver-publish-time">Time</label>
+            <input type="time" id="driver-publish-time" class="form-input" value="08:30" required />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="driver-publish-seats">Seats</label>
+            <input type="number" id="driver-publish-seats" class="form-input" min="1" max="7" value="4" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="driver-publish-fare">Fare (₹)</label>
+            <input type="number" id="driver-publish-fare" class="form-input" min="10" max="200" value="40" required />
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="padding: 0.85rem; margin-top: 0.5rem; font-weight: 800;">
+          🚀 Publish
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Update Fare -->
+  <div id="modal-driver-update-fare" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem; font-weight: 900;">Update Fare</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="driver-update-fare-form">
+        <div class="form-group">
+          <label class="form-label" for="driver-update-fare-input">New Fare (₹)</label>
+          <input type="number" id="driver-update-fare-input" class="form-input" min="10" max="200" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top: 1rem;">Update</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Stop -->
+  <div id="modal-add-stop" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem; font-weight: 900;">Add Stop</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="admin-add-stop-form">
+        <div class="form-group">
+          <label class="form-label" for="add-stop-name">Stop Name</label>
+          <input type="text" id="add-stop-name" class="form-input" placeholder="e.g. Nalwadi Square" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add-stop-landmark">Landmark</label>
+          <input type="text" id="add-stop-landmark" class="form-input" placeholder="e.g. Near Panchavati" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add-stop-distance">Distance from Start (km)</label>
+          <input type="number" id="add-stop-distance" class="form-input" step="0.1" value="5.0" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Add Stop</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Create Route -->
+  <div id="modal-create-route" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem; font-weight: 900;">Create Route</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="admin-create-route-form">
+        <div class="form-group">
+          <label class="form-label" for="create-route-name">Route Name</label>
+          <input type="text" id="create-route-name" class="form-input" placeholder="e.g. Sawangi ↔ Wardha" required />
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="create-route-origin">Origin</label>
+            <input type="text" id="create-route-origin" class="form-input" placeholder="Sawangi" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="create-route-destination">Destination</label>
+            <input type="text" id="create-route-destination" class="form-input" placeholder="Wardha" required />
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="create-route-distance">Distance (km)</label>
+            <input type="number" id="create-route-distance" class="form-input" value="12" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="create-route-basefare">Base Fare (₹)</label>
+            <input type="number" id="create-route-basefare" class="form-input" value="20" required />
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Create Route</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Customer Review -->
+  <div id="modal-customer-review" class="modal-backdrop">
+    <div class="modal-card" style="text-align: center;">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem; font-weight: 900;">Rate Your Ride ⭐</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="customer-review-form">
+        <input type="hidden" id="review-booking-id" />
+        <div class="form-group">
+          <label class="form-label" for="review-rating-select">Rating</label>
+          <select id="review-rating-select" class="form-select">
+            <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
+            <option value="4">⭐⭐⭐⭐ Good</option>
+            <option value="3">⭐⭐⭐ Average</option>
+            <option value="2">⭐⭐ Poor</option>
+            <option value="1">⭐ Bad</option>
+          </select>
+        </div>
+        <div class="form-group" style="text-align: left;">
+          <label class="form-label" for="review-comment-input">Feedback</label>
+          <textarea id="review-comment-input" class="form-textarea" rows="3" placeholder="Punctual, clean car, safe driving..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Submit</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Auth Modal -->
+  <div id="modal-auth" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 480px; padding: 0; overflow: hidden;">
+      <div style="padding: 1.5rem 1.5rem 0.75rem; text-align: center;">
+        <div style="font-size: 2rem; margin-bottom: 0.25rem;">⚡</div>
+        <h3 style="font-size: 1.25rem; font-weight: 900; margin: 0;">Welcome to Safar<strong style="color:var(--orange);">X</strong></h3>
+        <p style="font-size: 0.78rem; color: var(--text-light); margin-top: 0.25rem;">Firebase Authentication</p>
+        <button class="modal-close-btn" style="position: absolute; top: 1rem; right: 1rem;">&times;</button>
+      </div>
+
+      <!-- Auth Tabs -->
+      <div style="display: flex; border-bottom: 1px solid var(--border-soft); margin-bottom: 0;">
+        <button class="auth-tab-btn active" data-auth-tab="phone">📱 Phone</button>
+        <button class="auth-tab-btn" data-auth-tab="email">✉️ Email</button>
+        <button class="auth-tab-btn" data-auth-tab="signup">✨ Sign Up</button>
+        <button class="auth-tab-btn" data-auth-tab="demo">🔄 Demo</button>
+      </div>
+
+      <div style="padding: 1.5rem;">
+
+        <!-- Phone OTP Tab -->
+        <div id="auth-tab-content-phone">
+          <form id="firebase-phone-form">
+            <div class="form-group">
+              <label class="form-label" for="fb-phone-input">Mobile Number</label>
+              <div style="display: flex; gap: 0.5rem;">
+                <span style="padding: 0.7rem 0.8rem; background: var(--cream); border: 1.5px solid var(--border-soft); border-radius: var(--radius-sm); font-weight: 700; color: var(--text-light);">+91</span>
+                <input type="tel" id="fb-phone-input" class="form-input" placeholder="9890123456" maxlength="10" required />
+              </div>
+              <small style="color: var(--text-light); font-size: 0.7rem; margin-top: 0.3rem; display: block;">Firebase SMS verification</small>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="fb-role-select-step1">Join as</label>
+              <select id="fb-role-select-step1" class="form-select">
+                <option value="CUSTOMER">Passenger</option>
+                <option value="DRIVER">Driver Partner</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" style="padding: 0.8rem; font-weight: 800;">
+              📲 Send OTP
+            </button>
+          </form>
+
+          <form id="firebase-otp-form" style="display: none;">
+            <div style="text-align: center; margin-bottom: 1.25rem;">
+              <div style="font-size: 0.84rem; color: var(--text-light);">OTP sent to:</div>
+              <div id="fb-target-phone" style="font-weight: 800; font-size: 1.1rem; color: var(--orange);">+91 9890123456</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="fb-fullname-input">Full Name (Optional)</label>
+              <input type="text" id="fb-fullname-input" class="form-input" placeholder="e.g. Jay Thakkar" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="fb-role-select">Role</label>
+              <select id="fb-role-select" class="form-select">
+                <option value="CUSTOMER">Passenger</option>
+                <option value="DRIVER">Driver Partner</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="fb-otp-input">6-Digit Code</label>
+              <input type="text" id="fb-otp-input" class="form-input" placeholder="123456" maxlength="6" style="text-align: center; font-size: 1.4rem; letter-spacing: 0.4rem; font-weight: 800;" required />
+              <small style="display: block; text-align: center; color: var(--text-light); font-size: 0.72rem; margin-top: 0.3rem;">
+                Test OTP: <strong style="color: var(--orange);">123456</strong>
+              </small>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" style="padding: 0.8rem; font-weight: 800;">
+              ✅ Verify & Log In
+            </button>
+
+            <button type="button" class="btn btn-secondary btn-block" style="margin-top: 0.5rem; font-size: 0.8rem;" onclick="document.getElementById('firebase-phone-form').style.display='block'; document.getElementById('firebase-otp-form').style.display='none';">
+              ← Change Number
+            </button>
+          </form>
+        </div>
+
+        <!-- Email Tab -->
+        <div id="auth-tab-content-email" style="display: none;">
+          <form id="email-login-form">
+            <div class="form-group">
+              <label class="form-label" for="login-email">Email or Mobile</label>
+              <input type="text" id="login-email" class="form-input" placeholder="jay@example.com" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="login-password">Password</label>
+              <input type="password" id="login-password" class="form-input" placeholder="••••••••" required />
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" style="padding: 0.8rem; font-weight: 800;">
+              Sign In
+            </button>
+          </form>
+
+          <div style="display: flex; align-items: center; margin: 1rem 0; color: var(--text-light); font-size: 0.75rem;">
+            <div style="flex: 1; height: 1px; background: var(--border-soft);"></div>
+            <span style="padding: 0 0.5rem;">OR</span>
+            <div style="flex: 1; height: 1px; background: var(--border-soft);"></div>
+          </div>
+
+          <button type="button" class="btn btn-block btn-secondary" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem;" onclick="window.SafarXAuth.loginWithGoogle().then(res => { window.SafarXApp.closeModal('modal-auth'); window.SafarXApp.updateUserUI(res.user); window.SafarXApp.renderActivePlatform(); }).catch(e => window.SafarXApp.showToast(e.message, 'error'))">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+            Continue with Google
+          </button>
+        </div>
+
+        <!-- Sign Up Tab -->
+        <div id="auth-tab-content-signup" style="display: none;">
+          <form id="signup-form">
+            <div class="form-group">
+              <label class="form-label" for="signup-name">Full Name</label>
+              <input type="text" id="signup-name" class="form-input" placeholder="Jay Thakkar" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="signup-email">Email</label>
+              <input type="email" id="signup-email" class="form-input" placeholder="jay@example.com" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="signup-phone">Mobile</label>
+              <input type="tel" id="signup-phone" class="form-input" placeholder="9890123456" maxlength="10" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="signup-password">Password</label>
+              <input type="password" id="signup-password" class="form-input" placeholder="Min 6 characters" minlength="6" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="signup-role">Join As</label>
+              <select id="signup-role" class="form-select" required>
+                <option value="CUSTOMER">Passenger</option>
+                <option value="DRIVER">Driver Partner</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" style="padding: 0.8rem; font-weight: 800;">
+              Create Account
+            </button>
+          </form>
+        </div>
+
+        <!-- Demo Tab -->
+        <div id="auth-tab-content-demo" style="display: none;">
+          <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.75rem; text-align: center;">
+            Quick test profiles — tap to switch:
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+            <div class="card" style="padding: 0.75rem; cursor: pointer; transition: all 0.2s ease;" onclick="window.SafarXApp.switchDemoAccount('CUSTOMER')" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border-soft)'">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 800; font-size: 0.88rem;">Jay Thakkar</div>
+                  <div style="font-size: 0.72rem; color: var(--text-light);">jay@example.com</div>
+                </div>
+                <span class="badge badge-success">CUSTOMER</span>
+              </div>
+            </div>
+
+            <div class="card" style="padding: 0.75rem; cursor: pointer; transition: all 0.2s ease;" onclick="window.SafarXApp.switchDemoAccount('DRIVER')" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border-soft)'">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 800; font-size: 0.88rem;">Rahul Sharma</div>
+                  <div style="font-size: 0.72rem; color: var(--text-light);">Swift Dzire • ⭐ 4.9</div>
+                </div>
+                <span class="badge badge-warning">DRIVER</span>
+              </div>
+            </div>
+
+            <div class="card" style="padding: 0.75rem; cursor: pointer; transition: all 0.2s ease;" onclick="window.SafarXApp.switchDemoAccount('ADMIN')" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border-soft)'">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 800; font-size: 0.88rem;">Administrator</div>
+                  <div style="font-size: 0.72rem; color: var(--text-light);">Full Control</div>
+                </div>
+                <span class="badge badge-danger">ADMIN</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- App Bootstrap -->
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

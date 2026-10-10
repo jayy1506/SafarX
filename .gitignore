@@ -1,0 +1,41 @@
+# Environment Variables & Secrets (NEVER COMMIT)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+service-account*.json
+firebase-adminsdk*.json
+firebase-service-account*.json
+*service-account*.json
+*.secret.json
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build Outputs & Caches
+dist/
+build/
+backend/dist/
+.cache/
+*.tsbuildinfo
+
+# Operating System & IDE Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+logs/
+*.log

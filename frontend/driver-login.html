@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SafarX — Driver Partner Login</title>
+  <meta name="description" content="Login to your SafarX driver partner account to manage rides, earnings and schedule on the Sawangi–Wardha corridor." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --orange: #FF6B00;
+      --orange-hover: #E55F00;
+      --orange-glow: rgba(255,107,0,0.18);
+      --orange-light: #FFF4ED;
+      --white: #FFFFFF;
+      --off-white: #FAFAFA;
+      --cream: #FFF8F3;
+      --text-dark: #1A1A1A;
+      --text-light: #999999;
+      --border: #F0F0F0;
+      --success: #22C55E;
+      --danger: #EF4444;
+      --warning: #F59E0B;
+      --warning-light: #FFFBEB;
+      --font: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --radius: 16px;
+      --radius-full: 9999px;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--off-white);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 420px;
+      padding: 2rem 1.5rem;
+    }
+
+    /* Brand */
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin-bottom: 2rem;
+    }
+    .brand-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, #FF6B00, #FF9A45);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      box-shadow: 0 8px 25px rgba(255,107,0,0.3);
+    }
+    .brand-text {
+      font-size: 1.5rem; font-weight: 900; color: var(--text-dark);
+    }
+    .brand-text strong { color: var(--orange); }
+
+    /* Title */
+    .page-title {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .page-title h1 {
+      font-size: 1.6rem; font-weight: 900; color: var(--text-dark);
+      margin-bottom: 0.3rem;
+    }
+    .page-title p {
+      font-size: 0.84rem; color: var(--text-light); font-weight: 500;
+    }
+
+    .role-badge {
+      display: inline-block;
+      background: var(--warning-light);
+      color: var(--warning);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 0.3rem 0.8rem;
+      border-radius: var(--radius-full);
+      font-size: 0.72rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Tabs */
+    .tab-row {
+      display: flex;
+      background: var(--cream);
+      border-radius: var(--radius-full);
+      padding: 4px;
+      margin-bottom: 1.75rem;
+      gap: 4px;
+    }
+    .tab-btn {
+      flex: 1; padding: 0.55rem; font-size: 0.78rem; font-weight: 700;
+      border: none; background: transparent; border-radius: var(--radius-full);
+      cursor: pointer; color: var(--text-light); transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+      font-family: var(--font);
+    }
+    .tab-btn.active {
+      background: var(--white); color: var(--orange);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+    .tab-btn:hover:not(.active) { color: var(--text-dark); }
+
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; animation: fadeUp 0.3s ease; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Form */
+    .form-group { margin-bottom: 1rem; }
+    label {
+      display: block; font-size: 0.76rem; font-weight: 700;
+      color: var(--text-light); margin-bottom: 0.4rem; text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .input-wrap { position: relative; }
+    .input-prefix {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      font-weight: 700; color: var(--text-light); font-size: 0.88rem; pointer-events: none;
+    }
+    input, select {
+      width: 100%; padding: 0.75rem 1rem;
+      border: 1.5px solid var(--border); border-radius: 12px;
+      font-family: var(--font); font-size: 0.88rem; font-weight: 600;
+      color: var(--text-dark); background: var(--white);
+      transition: all 0.2s; outline: none; appearance: none;
+    }
+    input.with-prefix { padding-left: 2.8rem; }
+    input:focus, select:focus {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 4px var(--orange-glow);
+    }
+    input::placeholder { color: #C0C0C0; font-weight: 500; }
+    .otp-input {
+      text-align: center; font-size: 1.8rem; font-weight: 900;
+      letter-spacing: 0.5rem; padding: 0.9rem;
+    }
+
+    /* Buttons */
+    .btn {
+      width: 100%; padding: 0.85rem; border: none; border-radius: var(--radius-full);
+      font-family: var(--font); font-size: 0.88rem; font-weight: 800;
+      cursor: pointer; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); display: flex;
+      align-items: center; justify-content: center; gap: 0.5rem;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--orange); color: white;
+      box-shadow: 0 6px 24px rgba(255,107,0,0.3);
+    }
+    .btn-primary:hover {
+      background: var(--orange-hover);
+      box-shadow: 0 10px 30px rgba(255,107,0,0.4);
+      transform: translateY(-2px);
+    }
+    .btn-outline {
+      background: transparent; border: 1.5px solid var(--border);
+      color: var(--text-light); font-size: 0.82rem;
+    }
+    .btn-outline:hover { border-color: var(--orange); color: var(--orange); }
+    .btn + .btn { margin-top: 0.6rem; }
+
+    .otp-target {
+      text-align: center; padding: 0.8rem; background: var(--orange-light);
+      border: 1.5px solid rgba(255,107,0,0.2); border-radius: 12px;
+      margin-bottom: 1rem;
+    }
+    .otp-target .phone-num { font-weight: 800; font-size: 1.05rem; color: var(--orange); }
+    .otp-target .hint { font-size: 0.72rem; color: var(--text-light); margin-top: 0.2rem; font-weight: 600; }
+
+    .switch-link {
+      text-align: center; margin-top: 1.75rem;
+      font-size: 0.82rem; color: var(--text-light); font-weight: 600;
+    }
+    .switch-link a {
+      color: var(--orange); text-decoration: none; font-weight: 800;
+    }
+    .switch-link a:hover { text-decoration: underline; }
+
+    .info-box {
+      padding: 0.85rem; border-radius: 12px;
+      background: var(--warning-light); border: 1.5px solid rgba(245, 158, 11, 0.3);
+      font-size: 0.8rem; color: #92400e; font-weight: 600; margin-bottom: 1rem;
+      line-height: 1.5; text-align: center;
+    }
+
+    /* Loading */
+    .spinner {
+      width: 16px; height: 16px; border: 2.5px solid rgba(255,255,255,0.4);
+      border-top-color: white; border-radius: 50%;
+      animation: spin 0.7s linear infinite; display: none;
+    }
+    .btn.loading .spinner { display: block; }
+    .btn.loading .btn-text { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast */
+    .toast-wrap {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 0.5rem; z-index: 9999;
+    }
+    .toast {
+      padding: 0.75rem 1.4rem; border-radius: var(--radius-full);
+      font-size: 0.84rem; font-weight: 700;
+      animation: toastUp 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12); text-align: center;
+    }
+    .toast.success { background: var(--success); color: white; }
+    .toast.error { background: var(--danger); color: white; }
+    .toast.info { background: var(--orange); color: white; }
+    @keyframes toastUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+
+    /* Route badge at bottom */
+    .route-pill {
+      text-align: center; margin-top: 2rem;
+    }
+    .route-pill span {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: var(--orange-light);
+      border: 1px solid rgba(255,107,0,0.15);
+      border-radius: var(--radius-full);
+      padding: 0.4rem 1rem;
+      color: var(--orange); font-size: 0.72rem; font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <div class="brand-row">
+      <div class="brand-icon">🚗</div>
+      <div class="brand-text">Safar<strong>X</strong></div>
+    </div>
+
+    <div class="page-title">
+      <span class="role-badge">🚗 Driver Partner</span>
+      <h1>Welcome Back 👋</h1>
+      <p>Sign in to your driver dashboard</p>
+    </div>
+
+    <div class="tab-row" role="tablist">
+      <button class="tab-btn active" data-tab="phone" role="tab">📱 Phone</button>
+      <button class="tab-btn" data-tab="email" role="tab">✉️ Email</button>
+      <button class="tab-btn" data-tab="signup" role="tab">✨ Register</button>
+    </div>
+
+    <!-- Phone OTP -->
+    <div class="tab-pane active" id="pane-phone">
+      <div id="phone-step1">
+        <form id="phone-form">
+          <div class="form-group">
+            <label for="phone-input">Registered Mobile</label>
+            <div class="input-wrap">
+              <span class="input-prefix">+91</span>
+              <input type="tel" id="phone-input" class="with-prefix" placeholder="9890123456" maxlength="10" autocomplete="tel" required />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" id="send-otp-btn">
+            <span class="spinner"></span>
+            <span class="btn-text">📲 Send OTP</span>
+          </button>
+        </form>
+      </div>
+      <div id="phone-step2" style="display:none;">
+        <div class="otp-target">
+          <div class="phone-num" id="otp-target-num">+91 9890123456</div>
+          <div class="hint">OTP sent · Test code: <strong>123456</strong></div>
+        </div>
+        <form id="otp-form">
+          <div class="form-group">
+            <label for="otp-input">6-Digit Code</label>
+            <input type="text" id="otp-input" class="otp-input" placeholder="••••••" maxlength="6" inputmode="numeric" required />
+          </div>
+          <button type="submit" class="btn btn-primary" id="verify-btn">
+            <span class="spinner"></span>
+            <span class="btn-text">✅ Verify & Sign In</span>
+          </button>
+          <button type="button" class="btn btn-outline" onclick="showStep1()">← Change Number</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Email -->
+    <div class="tab-pane" id="pane-email">
+      <form id="email-form">
+        <div class="form-group">
+          <label for="email-input">Email Address</label>
+          <input type="email" id="email-input" placeholder="driver@example.com" autocomplete="email" required />
+        </div>
+        <div class="form-group">
+          <label for="pass-input">Password</label>
+          <input type="password" id="pass-input" placeholder="••••••••" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn btn-primary" id="email-btn">
+          <span class="spinner"></span>
+          <span class="btn-text">Sign In as Driver</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Register -->
+    <div class="tab-pane" id="pane-signup">
+      <div class="info-box">
+        ⚠️ Registration is <strong>PENDING</strong> until admin approval.
+      </div>
+      <form id="signup-form">
+        <div class="form-group">
+          <label for="su-name">Full Name</label>
+          <input type="text" id="su-name" placeholder="Rahul Sharma" autocomplete="name" required />
+        </div>
+        <div class="form-group">
+          <label for="su-email">Email Address</label>
+          <input type="email" id="su-email" placeholder="rahul@example.com" autocomplete="email" required />
+        </div>
+        <div class="form-group">
+          <label for="su-phone">Mobile Number</label>
+          <div class="input-wrap">
+            <span class="input-prefix">+91</span>
+            <input type="tel" id="su-phone" class="with-prefix" placeholder="9890123456" maxlength="10" autocomplete="tel" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="su-vehicle">Vehicle Details</label>
+          <input type="text" id="su-vehicle" placeholder="Maruti Swift Dzire — MH31AB1234" required />
+        </div>
+        <div class="form-group">
+          <label for="su-pass">Password</label>
+          <input type="password" id="su-pass" placeholder="Min 6 characters" minlength="6" autocomplete="new-password" required />
+        </div>
+        <button type="submit" class="btn btn-primary" id="signup-btn">
+          <span class="spinner"></span>
+          <span class="btn-text">Register as Driver 🚗</span>
+        </button>
+      </form>
+    </div>
+
+    <div class="switch-link">
+      Looking for passenger login? <a href="/login.html">Passenger Login →</a>
+    </div>
+
+    <div class="route-pill">
+      <span>📍 Sawangi ↔ Wardha Corridor</span>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toast-container"></div>
+
+  <script type="module">
+    import { firebaseAuthInstance } from '/js/firebase-config.js';
+    import {
+      RecaptchaVerifier,
+      signInWithPhoneNumber,
+    } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
+
+    const BACKEND = (window.location.origin || 'http://localhost:5000') + '/api/v1';
+
+    function showToast(msg, type = 'info') {
+      const c = document.getElementById('toast-container');
+      const t = document.createElement('div');
+      t.className = `toast ${type}`;
+      t.textContent = msg;
+      c.appendChild(t);
+      setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.4s'; setTimeout(() => t.remove(), 400); }, 3500);
+    }
+
+    function setLoading(btn, on) { btn.classList.toggle('loading', on); btn.disabled = on; }
+
+    async function apiPost(path, body) {
+      const token = localStorage.getItem('sawangi_token');
+      const res = await fetch(BACKEND + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Request failed');
+      return data;
+    }
+
+    function onLoginSuccess(data) {
+      if (data.user?.role !== 'DRIVER') { showToast('This account is not a driver account.', 'error'); return; }
+      localStorage.setItem('sawangi_token', data.token);
+      localStorage.setItem('sawangi_user', JSON.stringify(data.user));
+      showToast(`Welcome back, ${data.user.fullName}! 🚗`, 'success');
+      setTimeout(() => { window.location.href = '/'; }, 900);
+    }
+
+    // Tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('pane-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    let _pendingPhone = null, _confirmationResult = null;
+    window.showStep1 = () => {
+      document.getElementById('phone-step1').style.display = 'block';
+      document.getElementById('phone-step2').style.display = 'none';
+    };
+
+    document.getElementById('phone-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const raw = document.getElementById('phone-input').value.trim();
+      const phone = raw.startsWith('+91') ? raw : `+91${raw}`;
+      const btn = document.getElementById('send-otp-btn');
+      setLoading(btn, true);
+      try {
+        if (!window.recaptchaVerifier) {
+          window.recaptchaVerifier = new RecaptchaVerifier(firebaseAuthInstance, 'send-otp-btn', { size: 'invisible' });
+        }
+        try {
+          _confirmationResult = await signInWithPhoneNumber(firebaseAuthInstance, phone, window.recaptchaVerifier);
+        } catch { _confirmationResult = null; }
+        _pendingPhone = phone;
+        document.getElementById('otp-target-num').textContent = phone;
+        document.getElementById('phone-step1').style.display = 'none';
+        document.getElementById('phone-step2').style.display = 'block';
+        showToast('OTP sent to ' + phone, 'info');
+      } catch (err) { showToast(err.message, 'error'); }
+      finally { setLoading(btn, false); }
+    });
+
+    document.getElementById('otp-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const otp = document.getElementById('otp-input').value.trim();
+      const btn = document.getElementById('verify-btn');
+      setLoading(btn, true);
+      try {
+        let idToken;
+        if (_confirmationResult) {
+          const cred = await _confirmationResult.confirm(otp);
+          idToken = await cred.user.getIdToken();
+        } else {
+          idToken = `test_phone_${Date.now()}.${btoa(JSON.stringify({ phone: _pendingPhone }))}.sig`;
+        }
+        const data = await apiPost('/auth/firebase-login', { idToken, phone: _pendingPhone, role: 'DRIVER' });
+        onLoginSuccess(data);
+      } catch (err) { showToast(err.message, 'error'); }
+      finally { setLoading(btn, false); }
+    });
+
+    document.getElementById('email-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email-input').value.trim();
+      const pass = document.getElementById('pass-input').value;
+      const btn = document.getElementById('email-btn');
+      setLoading(btn, true);
+      try {
+        const data = await apiPost('/auth/login', { emailOrPhone: email, password: pass });
+        onLoginSuccess(data);
+      } catch (err) { showToast(err.message, 'error'); }
+      finally { setLoading(btn, false); }
+    });
+
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fullName = document.getElementById('su-name').value.trim();
+      const email = document.getElementById('su-email').value.trim();
+      const phone = document.getElementById('su-phone').value.trim();
+      const vehicleInfo = document.getElementById('su-vehicle').value.trim();
+      const password = document.getElementById('su-pass').value;
+      const btn = document.getElementById('signup-btn');
+      setLoading(btn, true);
+      try {
+        const data = await apiPost('/auth/register', { fullName, email, phone, password, role: 'DRIVER', vehicleInfo });
+        localStorage.setItem('sawangi_token', data.token);
+        localStorage.setItem('sawangi_user', JSON.stringify(data.user));
+        showToast('Registration submitted! Awaiting admin approval. 🚗', 'success');
+        setTimeout(() => { window.location.href = '/'; }, 1000);
+      } catch (err) { showToast(err.message, 'error'); }
+      finally { setLoading(btn, false); }
+    });
+
+    // Redirect if already logged in as driver
+    const token = localStorage.getItem('sawangi_token');
+    if (token) {
+      try {
+        const u = JSON.parse(localStorage.getItem('sawangi_user') || '{}');
+        if (u.role === 'DRIVER') window.location.href = '/';
+      } catch {}
+    }
+  </script>
+</body>
+</html>

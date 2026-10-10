@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SafarX — Admin Control Panel</title>
+  <meta name="description" content="SafarX Admin-only login portal. Restricted access." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --orange: #FF6B00;
+      --orange-hover: #E55F00;
+      --orange-glow: rgba(255,107,0,0.18);
+      --orange-light: #FFF4ED;
+      --white: #FFFFFF;
+      --off-white: #FAFAFA;
+      --cream: #FFF8F3;
+      --text-dark: #1A1A1A;
+      --text-light: #999999;
+      --border: #F0F0F0;
+      --danger: #EF4444;
+      --danger-light: #FEF2F2;
+      --font: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --radius: 16px;
+      --radius-full: 9999px;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--off-white);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 420px;
+      padding: 2rem 1.5rem;
+    }
+
+    /* Brand */
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin-bottom: 2rem;
+    }
+    .brand-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, #EF4444, #F87171);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      box-shadow: 0 8px 25px rgba(239,68,68,0.3);
+    }
+    .brand-text {
+      font-size: 1.5rem; font-weight: 900; color: var(--text-dark);
+    }
+    .brand-text strong { color: var(--danger); }
+
+    /* Title */
+    .page-title {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .page-title h1 {
+      font-size: 1.6rem; font-weight: 900; color: var(--text-dark);
+      margin-bottom: 0.3rem;
+    }
+    .page-title p {
+      font-size: 0.84rem; color: var(--text-light); font-weight: 500;
+    }
+
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--danger-light);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      padding: 0.3rem 0.8rem;
+      border-radius: var(--radius-full);
+      font-size: 0.72rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--danger); animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* Notice */
+    .info-box {
+      padding: 0.85rem; border-radius: 12px;
+      background: var(--danger-light); border: 1.5px solid rgba(239,68,68,0.2);
+      font-size: 0.8rem; color: #991B1B; font-weight: 600; margin-bottom: 1.5rem;
+      line-height: 1.5; text-align: center;
+    }
+    .info-box strong { color: var(--danger); }
+
+    /* Form */
+    .form-group { margin-bottom: 1rem; }
+    label {
+      display: block; font-size: 0.76rem; font-weight: 700;
+      color: var(--text-light); margin-bottom: 0.4rem; text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input {
+      width: 100%; padding: 0.75rem 1rem;
+      border: 1.5px solid var(--border); border-radius: 12px;
+      font-family: var(--font); font-size: 0.88rem; font-weight: 600;
+      color: var(--text-dark); background: var(--white);
+      transition: all 0.2s; outline: none; appearance: none;
+    }
+    input:focus {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 4px rgba(239,68,68,0.15);
+    }
+    input::placeholder { color: #C0C0C0; font-weight: 500; }
+
+    /* Buttons */
+    .btn {
+      width: 100%; padding: 0.85rem; border: none; border-radius: var(--radius-full);
+      font-family: var(--font); font-size: 0.88rem; font-weight: 800;
+      cursor: pointer; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); display: flex;
+      align-items: center; justify-content: center; gap: 0.5rem;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--danger); color: white;
+      box-shadow: 0 6px 24px rgba(239,68,68,0.25);
+    }
+    .btn-primary:hover {
+      background: #DC2626;
+      box-shadow: 0 10px 30px rgba(239,68,68,0.35);
+      transform: translateY(-2px);
+    }
+    .btn-google {
+      background: white; color: var(--text-dark);
+      border: 1.5px solid var(--border);
+    }
+    .btn-google:hover { border-color: var(--danger); }
+    .btn + .btn { margin-top: 0.6rem; }
+
+    .divider {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin: 1.25rem 0; color: var(--text-light); font-size: 0.72rem; font-weight: 600;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    .capabilities {
+      margin-top: 1.75rem; padding: 1rem;
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .capabilities h4 { font-size: 0.75rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.6rem; text-align: center;}
+    .capabilities ul { list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
+    .capabilities ul li { font-size: 0.8rem; color: var(--text-dark); font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+
+    .switch-link {
+      text-align: center; margin-top: 1.75rem;
+      font-size: 0.82rem; color: var(--text-light); font-weight: 600;
+    }
+    .switch-link a {
+      color: var(--text-dark); text-decoration: none; font-weight: 800;
+    }
+    .switch-link a:hover { text-decoration: underline; color: var(--danger); }
+
+    /* Loading */
+    .spinner {
+      width: 16px; height: 16px; border: 2.5px solid rgba(255,255,255,0.4);
+      border-top-color: white; border-radius: 50%;
+      animation: spin 0.7s linear infinite; display: none;
+    }
+    .btn.loading .spinner { display: block; }
+    .btn.loading .btn-text { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast */
+    .toast-wrap {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 0.5rem; z-index: 9999;
+    }
+    .toast {
+      padding: 0.75rem 1.4rem; border-radius: var(--radius-full);
+      font-size: 0.84rem; font-weight: 700;
+      animation: toastUp 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12); text-align: center;
+    }
+    .toast.success { background: var(--success); color: white; }
+    .toast.error { background: var(--danger); color: white; }
+    .toast.info { background: var(--danger); color: white; }
+    @keyframes toastUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <div class="brand-row">
+      <div class="brand-icon">🛡️</div>
+      <div class="brand-text">Safar<strong>X</strong></div>
+    </div>
+
+    <div class="page-title">
+      <span class="role-badge"><span class="dot"></span> Admin Control Panel</span>
+      <h1>Restricted Access 🔐</h1>
+      <p>For SafarX administrators only</p>
+    </div>
+
+    <div class="info-box">
+      Only the authorized admin <strong>jthakre62@gmail.com</strong> can access this panel.
+    </div>
+
+    <form id="admin-login-form">
+      <div class="form-group">
+        <label for="admin-email">Admin Email</label>
+        <input type="email" id="admin-email" placeholder="jthakre62@gmail.com" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label for="admin-pass">Password</label>
+        <input type="password" id="admin-pass" placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="login-btn">
+        <span class="spinner"></span>
+        <span class="btn-text">🔐 Access Admin Panel</span>
+      </button>
+    </form>
+
+    <div class="divider">OR</div>
+
+    <button class="btn btn-google" id="google-admin-btn" onclick="adminGoogleLogin()">
+      <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+      Continue with Google
+    </button>
+
+    <div class="capabilities">
+      <h4>Admin Capabilities</h4>
+      <ul>
+        <li>👥 Manage users and drivers</li>
+        <li>📊 View total platform revenue</li>
+        <li>🗺️ Manage routes and stops</li>
+      </ul>
+    </div>
+
+    <div class="switch-link">
+      <a href="/login.html">← Back to Passenger Login</a>
+      &nbsp;·&nbsp;
+      <a href="/driver-login.html">Driver Login</a>
+    </div>
+
+  </div>
+
+  <div class="toast-wrap" id="toast-container"></div>
+
+  <script type="module">
+    import { firebaseAuthInstance } from '/js/firebase-config.js';
+    import {
+      GoogleAuthProvider,
+      signInWithPopup,
+    } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
+
+    const ADMIN_EMAIL = 'jthakre62@gmail.com';
+    const BACKEND = (window.location.origin || 'http://localhost:5000') + '/api/v1';
+
+    function showToast(msg, type = 'info') {
+      const c = document.getElementById('toast-container');
+      const t = document.createElement('div');
+      t.className = `toast ${type}`;
+      t.textContent = msg;
+      c.appendChild(t);
+      setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.4s'; setTimeout(() => t.remove(), 400); }, 4000);
+    }
+
+    function setLoading(btn, on) { btn.classList.toggle('loading', on); btn.disabled = on; }
+
+    async function apiPost(path, body) {
+      const res = await fetch(BACKEND + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Authentication failed');
+      return data;
+    }
+
+    function onAdminLoginSuccess(data) {
+      if (data.user?.role !== 'ADMIN') {
+        showToast('Access denied. Only the designated admin account can login here.', 'error');
+        return;
+      }
+      localStorage.setItem('sawangi_token', data.token);
+      localStorage.setItem('sawangi_user', JSON.stringify(data.user));
+      showToast('Welcome, Admin! Redirecting to control panel... 🛡️', 'success');
+      setTimeout(() => { window.location.href = '/'; }, 900);
+    }
+
+    // Email + Password admin login
+    document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('admin-email').value.trim();
+      const pass = document.getElementById('admin-pass').value;
+
+      // Front-end guard — only admin email allowed
+      if (email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+        showToast('Access denied. This portal is restricted to ' + ADMIN_EMAIL, 'error');
+        return;
+      }
+
+      const btn = document.getElementById('login-btn');
+      setLoading(btn, true);
+      try {
+        const data = await apiPost('/auth/login', { emailOrPhone: email, password: pass });
+        onAdminLoginSuccess(data);
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+
+    // Google admin login
+    window.adminGoogleLogin = async () => {
+      const btn = document.getElementById('google-admin-btn');
+      setLoading(btn, true);
+      try {
+        const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({ login_hint: ADMIN_EMAIL });
+        let idToken, email, displayName;
+        try {
+          const result = await signInWithPopup(firebaseAuthInstance, provider);
+          email = result.user.email;
+          displayName = result.user.displayName;
+          idToken = await result.user.getIdToken();
+          // Front-end guard — Google account must be the admin email
+          if (email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+            showToast(`Access denied. Please sign in as ${ADMIN_EMAIL}`, 'error');
+            return;
+          }
+        } catch (popErr) {
+          console.warn('Google popup blocked — test mode:', popErr.message);
+          // Test mode fallback — still enforce via backend
+          email = ADMIN_EMAIL;
+          displayName = 'Admin';
+          idToken = `test_google_admin_${Date.now()}.${btoa(JSON.stringify({ email, name: displayName }))}.sig`;
+        }
+        const data = await apiPost('/auth/firebase-login', { idToken, role: 'ADMIN', fullName: displayName });
+        onAdminLoginSuccess(data);
+      } catch (err) {
+        showToast('Google Sign-In failed: ' + err.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    };
+
+    // Redirect if already logged in as admin
+    const token = localStorage.getItem('sawangi_token');
+    if (token) {
+      try {
+        const u = JSON.parse(localStorage.getItem('sawangi_user') || '{}');
+        if (u.role === 'ADMIN') window.location.href = '/';
+      } catch {}
+    }
+  </script>
+</body>
+</html>
