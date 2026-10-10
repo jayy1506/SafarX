@@ -9,8 +9,13 @@ import { Payment } from '../models/Payment.js';
 import { AdminSettings } from '../models/AdminSettings.js';
 import { SegmentEngine } from '../services/segmentEngine.js';
 
+let isSeeding = false;
+
 export async function seedDatabase(): Promise<void> {
-  console.log('[Seeder] Initializing database seed data...');
+  if (isSeeding) return;
+  isSeeding = true;
+  try {
+    console.log('[Seeder] Initializing database seed data...');
 
   // 1. Admin Settings
   await AdminSettings.deleteMany({});
@@ -47,7 +52,7 @@ export async function seedDatabase(): Promise<void> {
   const admin = await User.create({
     fullName: 'Jay Thakre (Super Admin)',
     email: 'jthakre62@gmail.com',
-    phone: '9890123456',
+    phone: '9890123450',
     password: 'admin123',
     role: 'ADMIN',
   });
@@ -355,7 +360,10 @@ export async function seedDatabase(): Promise<void> {
   booking2.payment = payment2._id;
   await booking2.save();
 
-  console.log('[Seeder] Database successfully seeded with production accounts, routes, rides, and segment matrix.');
+    console.log('[Seeder] Database successfully seeded with production accounts, routes, rides, and segment matrix.');
+  } finally {
+    isSeeding = false;
+  }
 }
 
 if (process.argv[1] && /seedData\.(ts|js)$/.test(process.argv[1].replace(/\\/g, '/'))) {

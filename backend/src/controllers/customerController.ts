@@ -215,7 +215,10 @@ export class CustomerController {
    */
   static async verifyPayment(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const { bookingId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
+      const bookingId = req.body.bookingId || req.body.booking_id;
+      const razorpayOrderId = req.body.razorpayOrderId || req.body.razorpay_order_id || req.body.order_id;
+      const razorpayPaymentId = req.body.razorpayPaymentId || req.body.razorpay_payment_id || req.body.payment_id;
+      const razorpaySignature = req.body.razorpaySignature || req.body.razorpay_signature || req.body.signature;
 
       if (!bookingId || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
         res.status(400).json({

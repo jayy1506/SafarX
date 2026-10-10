@@ -115,7 +115,9 @@ export class RazorpayService {
         .update(rawBody)
         .digest('hex');
 
-      return crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(signature));
+      const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+      const actualBuf = Buffer.from(signature, 'utf8');
+      return expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf);
     } catch (err: any) {
       logger.warn({ error: err.message }, 'Webhook signature timing validation error');
       return false;
@@ -134,7 +136,9 @@ export class RazorpayService {
         .update(payload)
         .digest('hex');
 
-      return crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(signature));
+      const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+      const actualBuf = Buffer.from(signature, 'utf8');
+      return expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf);
     } catch {
       return false;
     }

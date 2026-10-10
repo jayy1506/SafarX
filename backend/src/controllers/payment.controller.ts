@@ -5,6 +5,9 @@ import { Payment } from '../models/Payment.js';
 import { Booking } from '../models/Booking.js';
 import { SegmentEngine } from '../services/segmentEngine.js';
 import { NotificationService } from '../services/notificationService.js';
+import { razorpayClient } from '../config/razorpay.js';
+import { ENV } from '../config/env.js';
+import crypto from 'crypto';
 import { logger } from '../utils/logger.js';
 
 export class PaymentController {
@@ -168,5 +171,175 @@ export class PaymentController {
     }
 
     res.status(200).json({ success: true, payment });
+  }
+
+  /**
+   * @route   POST /api/create-order
+   * @desc    Creates a Razorpay Order
+   * @access  Public
+   */
+  static async createOrder(req: Request, res: Response): Promise<void> {
+    try {
+      const { amount, currency = 'INR', receipt } = req.body;
+
+      // Validate amount >= 100 paise
+      const numAmount = Number(amount);
+      if (!amount || isNaN(numAmount) || numAmount < 100) {
+        res.status(400).json({
+          success: false,
+          message: 'Validation error: amount is required and must be at least 100 paise (₹1.00).',
+        });
+        return;
+      }
+
+      const receiptId = (receipt || `rcpt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`).substring(0, 40);
+
+      const options = {
+        amount: Math.round(numAmount),
+        currency: currency || 'INR',
+        receipt: receiptId,
+      };
+
+      try {
+        const order = await razorpayClient.orders.create(options);
+        res.status(200).json({
+          order_id: order.id,
+          amount: order.amount,
+          currency: order.currency,
+          // Extra helpful fields for client convenience
+          key_id: ENV.RAZORPAY_KEY_ID,
+          orderId: order.id,
+          keyId: ENV.RAZORPAY_KEY_ID,
+        });
+      } catch (err: any) {
+        logger.error({ error: err?.message || err }, '[Razorpay API] Error creating order');
+        if (err.statusCode === 401 || (err?.error?.code === 'BAD_REQUEST_ERROR' && String(err?.message || '').toLowerCase().includes('auth'))) {
+          res.status(401).json({
+            success: false,
+            message: 'Razorpay authentication failed: invalid credentials.',
+          });
+          return;
+        }
+
+        res.status(err.statusCode || 500).json({
+          success: false,
+          message: err?.error?.description || err.message || 'Failed to create Razorpay order',
+        });
+      }
+    } catch (error: any) {
+      logger.error({ error: error.message }, '[Create Order] Internal server error');
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * @route   POST /api/verify-payment
+   * @desc    Cryptographically verify payment signature: HMAC-SHA256(order_id + "|" + payment_id, KEY_SECRET)
+   * @access  Public
+   */
+  static async verifyPayment(req: Request, res: Response): Promise<void> {
+    try {
+      const orderId = req.body.order_id || req.body.razorpay_order_id || req.body.razorpayOrderId;
+      const paymentId = req.body.payment_id || req.body.razorpay_payment_id || req.body.razorpayPaymentId;
+      const signature = req.body.signature || req.body.razorpay_signature || req.body.razorpaySignature;
+
+      // Missing fields: return 400
+      if (!orderId || !paymentId || !signature) {
+        res.status(400).json({
+          success: false,
+          message: 'Missing required parameters: razorpay_order_id, razorpay_payment_id, and razorpay_signature are required.',
+        });
+        return;
+      }
+
+      // Algorithm: HMAC-SHA256(order_id + "|" + payment_id, KEY_SECRET)
+      const payload = `${orderId}|${paymentId}`;
+      const expectedSignature = crypto
+        .createHmac('sha256', ENV.RAZORPAY_KEY_SECRET)
+        .update(payload)
+        .digest('hex');
+
+      const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+      const actualBuf = Buffer.from(signature, 'utf8');
+      const isValid = expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf);
+
+      if (!isValid) {
+        // If payment record exists, mark as FAILED (do NOT mark as paid)
+        const payment = await Payment.findOne({ razorpayOrderId: orderId });
+        if (payment) {
+          payment.status = 'FAILED';
+          payment.failureReason = 'Invalid cryptographic signature';
+          await payment.save();
+
+          const booking = await Booking.findById(payment.booking);
+          if (booking && booking.bookingStatus === 'PENDING_PAYMENT') {
+            booking.paymentStatus = 'FAILED';
+            await booking.save();
+            await SegmentEngine.releaseHeldSeats(
+              booking.ride,
+              booking.pickupIndex,
+              booking.dropIndex,
+              booking.seatsBooked
+            );
+          }
+        }
+
+        res.status(400).json({
+          success: false,
+          message: 'Invalid payment signature. Verification failed.',
+        });
+        return;
+      }
+
+      // Signature matches! Update payment & booking if present in database
+      const payment = await Payment.findOne({ razorpayOrderId: orderId });
+      let bookingData: any = null;
+      if (payment) {
+        payment.status = 'CAPTURED';
+        payment.razorpayPaymentId = paymentId;
+        payment.razorpaySignature = signature;
+        await payment.save();
+
+        const booking = await Booking.findById(payment.booking).populate('ride');
+        if (booking && booking.bookingStatus !== 'CONFIRMED') {
+          booking.bookingStatus = 'CONFIRMED';
+          booking.paymentStatus = 'SUCCESS';
+          booking.payment = payment._id;
+          await booking.save();
+
+          await SegmentEngine.confirmHeldSeats(
+            booking.ride._id || booking.ride,
+            booking.pickupIndex,
+            booking.dropIndex,
+            booking.seatsBooked
+          );
+          bookingData = booking;
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Payment verified successfully',
+        order_id: orderId,
+        payment_id: paymentId,
+        booking: bookingData,
+      });
+    } catch (error: any) {
+      logger.error({ error: error.message }, '[Verify Payment] Internal server error');
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * @route   GET /api/razorpay-key
+   * @desc    Returns public Razorpay Key ID
+   * @access  Public
+   */
+  static async getKey(req: Request, res: Response): Promise<void> {
+    res.status(200).json({
+      success: true,
+      key_id: ENV.RAZORPAY_KEY_ID,
+      keyId: ENV.RAZORPAY_KEY_ID,
+    });
   }
 }

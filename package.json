@@ -37,7 +37,7 @@
     "morgan": "^1.10.0",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
-    "razorpay": "^2.9.5"
+    "razorpay": "^2.9.8"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

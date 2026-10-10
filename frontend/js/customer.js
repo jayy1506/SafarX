@@ -248,12 +248,12 @@ export const CustomerApp = {
     } catch {}
 
     const options = {
-      key: paymentOrder.keyId,
+      key: paymentOrder.keyId || paymentOrder.key_id,
       amount: paymentOrder.amount, // in integer paise
       currency: paymentOrder.currency || 'INR',
       name: 'SafarX Mobility',
       description: `${booking.pickupStop} ➔ ${booking.dropStop} (${booking.seatsBooked} Seat)`,
-      order_id: paymentOrder.orderId,
+      order_id: paymentOrder.orderId || paymentOrder.order_id,
       handler: async function (response) {
         try {
           window.SawangiApp?.showToast('Verifying payment cryptographically with server...', 'info');

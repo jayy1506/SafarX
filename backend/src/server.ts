@@ -16,6 +16,7 @@ import adminRoutes from './routes/adminRoutes.js';
 import driverRoutes from './routes/driverRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import { PaymentController } from './controllers/payment.controller.js';
 import healthRoutes from './routes/health.routes.js';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
 import { apiLimiter, authLimiter } from './middlewares/rateLimiter.js';
@@ -91,6 +92,15 @@ app.use('/api/v1/auth', authLimiter);
 app.use('/api/v1/payments', apiLimiter);
 app.use('/api/v1', apiLimiter);
 
+// Razorpay Standard Checkout Endpoints (Step 1 & Step 3)
+app.post('/api/create-order', PaymentController.createOrder);
+app.post('/api/verify-payment', PaymentController.verifyPayment);
+app.get('/api/razorpay-key', PaymentController.getKey);
+
+app.post('/api/v1/create-order', PaymentController.createOrder);
+app.post('/api/v1/verify-payment', PaymentController.verifyPayment);
+app.get('/api/v1/razorpay-key', PaymentController.getKey);
+
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/admin', adminRoutes);
@@ -129,7 +139,11 @@ async function startServer() {
   const userCount = await User.countDocuments();
   if (userCount === 0 && !ENV.IS_PRODUCTION && (process.env.AUTO_SEED === 'true' || ENV.NODE_ENV === 'development')) {
     logger.info('[Server] Development database is empty. Running initial test seed...');
-    await seedDatabase();
+    try {
+      await seedDatabase();
+    } catch (seedErr: any) {
+      logger.warn({ error: seedErr.message }, '[Server] Auto-seed non-fatal warning during startup');
+    }
   }
 
   // 4. Start Expired Seat Hold Reaper Worker (runs every 60 seconds)

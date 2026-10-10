@@ -17,13 +17,17 @@ export function verifyRazorpaySignature(
 ): boolean {
   if (!orderId || !paymentId || !signature) return false;
   
-  // For test/sandbox keys, if secret is mock or developer test signature
-  const body = `${orderId}|${paymentId}`;
-  const expectedSignature = crypto
-    .createHmac('sha256', ENV.RAZORPAY_KEY_SECRET)
-    .update(body.toString())
-    .digest('hex');
+  try {
+    const body = `${orderId}|${paymentId}`;
+    const expectedSignature = crypto
+      .createHmac('sha256', ENV.RAZORPAY_KEY_SECRET)
+      .update(body)
+      .digest('hex');
 
-  // Allow standard razorpay match or valid sha256
-  return expectedSignature === signature || (signature.startsWith('sim_sig_') && ENV.NODE_ENV === 'development');
+    const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+    const actualBuf = Buffer.from(signature, 'utf8');
+    return expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf);
+  } catch {
+    return false;
+  }
 }

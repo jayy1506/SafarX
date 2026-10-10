@@ -13,8 +13,8 @@ export async function connectDB(): Promise<typeof mongoose> {
       }
     } else {
       // In development / test mode
-      if (!uri && ENV.USE_IN_MEMORY_DB) {
-        console.log('[DB] USE_IN_MEMORY_DB is true. Initializing embedded MongoMemoryServer for development/testing...');
+      if (ENV.USE_IN_MEMORY_DB) {
+        console.log('[DB] USE_IN_MEMORY_DB=true. Initializing embedded MongoMemoryServer...');
         const { MongoMemoryServer } = await import('mongodb-memory-server');
         mongoMemoryServer = await MongoMemoryServer.create();
         uri = mongoMemoryServer.getUri();
@@ -40,6 +40,20 @@ export async function connectDB(): Promise<typeof mongoose> {
     console.error('[DB Connection Error]:', error.message || error);
     if (ENV.IS_PRODUCTION) {
       process.exit(1);
+    }
+
+    if (!mongoMemoryServer) {
+      try {
+        console.log('[DB] External MongoDB connection failed. Initializing MongoMemoryServer for development fallback...');
+        const { MongoMemoryServer } = await import('mongodb-memory-server');
+        mongoMemoryServer = await MongoMemoryServer.create();
+        const fallbackUri = mongoMemoryServer.getUri();
+        await mongoose.connect(fallbackUri);
+        console.log(`[DB] Fallback MongoMemoryServer active at: ${fallbackUri}`);
+        return mongoose;
+      } catch (memErr: any) {
+        console.error('[DB MongoMemoryServer Fallback Error]:', memErr.message || memErr);
+      }
     }
     throw error;
   }
