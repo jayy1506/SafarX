@@ -9,7 +9,8 @@
     "dev:backend": "tsx watch backend/src/server.ts",
     "build": "tsc -p backend/tsconfig.json",
     "start": "node backend/dist/server.js",
-    "seed": "tsx backend/src/seeders/seedData.ts"
+    "seed": "tsx backend/src/seeders/seedData.ts",
+    "test": "tsx --test backend/src/tests/**/*.test.ts"
   },
   "keywords": [
     "ride-booking",

@@ -258,13 +258,35 @@ export class DriverController {
       const { bookingId } = req.params;
       const { otp } = req.body;
 
+      if (!otp) {
+        res.status(400).json({ success: false, message: 'Boarding OTP is required' });
+        return;
+      }
+
       const booking = await Booking.findById(bookingId).populate('customer', 'fullName phone');
       if (!booking) {
         res.status(404).json({ success: false, message: 'Booking not found' });
         return;
       }
 
-      if (booking.boardingOtp !== otp) {
+      // Object-level authorization check: Driver must own the ride
+      const ride = await Ride.findById(booking.ride);
+      if (!ride || !ride.driver.equals(req.user!._id)) {
+        res.status(403).json({ success: false, message: 'You are not authorized to verify passengers for this ride' });
+        return;
+      }
+
+      if (booking.bookingStatus === 'BOARDED') {
+        res.status(200).json({ success: true, message: 'Passenger has already been boarded', booking });
+        return;
+      }
+
+      if (booking.bookingStatus !== 'CONFIRMED') {
+        res.status(400).json({ success: false, message: `Cannot board passenger with status ${booking.bookingStatus}` });
+        return;
+      }
+
+      if (booking.boardingOtp !== String(otp).trim()) {
         res.status(400).json({ success: false, message: 'Invalid Boarding OTP provided by passenger' });
         return;
       }
@@ -288,10 +310,30 @@ export class DriverController {
         return;
       }
 
+      // Object-level authorization check: Driver must own the ride
+      const ride = await Ride.findById(booking.ride);
+      if (!ride || !ride.driver.equals(req.user!._id)) {
+        res.status(403).json({ success: false, message: 'You are not authorized to manage passengers for this ride' });
+        return;
+      }
+
+      if (booking.bookingStatus !== 'CONFIRMED') {
+        res.status(400).json({ success: false, message: `Cannot mark no-show for booking with status ${booking.bookingStatus}` });
+        return;
+      }
+
       booking.bookingStatus = 'NO_SHOW';
       await booking.save();
 
-      res.json({ success: true, message: 'Passenger marked as No-Show', booking });
+      // Release seats for remaining journey segments
+      await SegmentEngine.releaseBookedSeats(
+        ride._id,
+        booking.pickupIndex,
+        booking.dropIndex,
+        booking.seatsBooked
+      );
+
+      res.json({ success: true, message: 'Passenger marked as No-Show. Seats released.', booking });
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message });
     }

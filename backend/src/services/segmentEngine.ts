@@ -1,7 +1,8 @@
 import mongoose, { Types } from 'mongoose';
 import { RideSegment, IRideSegment } from '../models/RideSegment.js';
-import { IRide } from '../models/Ride.js';
+import { Booking } from '../models/Booking.js';
 import { IRoute } from '../models/Route.js';
+import { logger } from '../utils/logger.js';
 
 export interface SegmentAvailabilityResult {
   isAvailable: boolean;
@@ -28,14 +29,12 @@ export class SegmentEngine {
       throw new Error('A ride must have at least 2 stops to generate segments');
     }
 
-    // Segment fare is proportionally distributed from total daily fare or per-km
+    // Segment fare is proportionally distributed from total daily fare
     const baseSegmentFare = Math.max(10, Math.round(dailyFare / (numStops - 1)));
 
     for (let i = 0; i < numStops - 1; i++) {
       const fromStop = stops[i];
       const toStop = stops[i + 1];
-
-      // Approximate distance per segment
       const approxDist = parseFloat((route.totalDistanceKm / (numStops - 1)).toFixed(1));
 
       segmentsData.push({
@@ -55,24 +54,78 @@ export class SegmentEngine {
   }
 
   /**
+   * Releases all expired seat holds where payment was not completed within the timeout window
+   */
+  static async releaseExpiredHolds(): Promise<number> {
+    try {
+      const now = new Date();
+      const expiredBookings = await Booking.find({
+        bookingStatus: 'PENDING_PAYMENT',
+        holdExpiresAt: { $lte: now },
+      });
+
+      if (expiredBookings.length === 0) return 0;
+
+      let releasedCount = 0;
+      for (const booking of expiredBookings) {
+        // Atomically transition status to prevent double-reaping
+        const updated = await Booking.findOneAndUpdate(
+          {
+            _id: booking._id,
+            bookingStatus: 'PENDING_PAYMENT',
+          },
+          {
+            bookingStatus: 'CANCELLED_BY_SYSTEM',
+            'cancellation.cancelledAt': now,
+            'cancellation.cancelledBy': 'SYSTEM',
+            'cancellation.reason': 'Seat hold reservation expired without payment completion',
+            'cancellation.refundStatus': 'NOT_APPLICABLE',
+          }
+        );
+
+        if (updated) {
+          await this.releaseHeldSeats(
+            booking.ride,
+            booking.pickupIndex,
+            booking.dropIndex,
+            booking.seatsBooked
+          );
+          releasedCount++;
+          logger.info(
+            { bookingId: booking._id, bookingNumber: booking.bookingNumber },
+            '[SegmentEngine] Released expired seat hold safely'
+          );
+        }
+      }
+
+      return releasedCount;
+    } catch (err: any) {
+      logger.error({ error: err.message }, '[SegmentEngine] Error releasing expired holds');
+      return 0;
+    }
+  }
+
+  /**
    * Checks availability of seats between pickupStop index and dropStop index
    */
   static async checkAvailability(
     rideId: Types.ObjectId | string,
     pickupIndex: number,
     dropIndex: number,
-    requestedSeats: number
+    requestedSeats: number = 1
   ): Promise<SegmentAvailabilityResult> {
     if (pickupIndex < 0 || dropIndex <= pickupIndex) {
       return {
         isAvailable: false,
         availableSeats: 0,
         segments: [],
-        reason: 'Pickup stop must be before drop stop',
+        reason: 'Pickup stop must be before drop stop in corridor sequence',
       };
     }
 
-    // Segments needed: from sequenceOrder = (pickupIndex + 1) to dropIndex
+    // Release expired holds first to ensure accurate real-time capacity
+    await this.releaseExpiredHolds();
+
     const startSeq = pickupIndex + 1;
     const endSeq = dropIndex;
 
@@ -86,7 +139,7 @@ export class SegmentEngine {
         isAvailable: false,
         availableSeats: 0,
         segments: [],
-        reason: 'Route segments could not be resolved',
+        reason: 'Corridor segments could not be resolved',
       };
     }
 
@@ -110,7 +163,9 @@ export class SegmentEngine {
   }
 
   /**
-   * Atomically reserve seats during checkout initiation (Seat Hold)
+   * Atomically reserve seats during checkout initiation (Concurrent-Safe Seat Hold)
+   * Prevents overbooking under high concurrency using atomic conditional document updates
+   * and automatic rollback if any segment fails.
    */
   static async holdSeats(
     rideId: Types.ObjectId | string,
@@ -118,32 +173,66 @@ export class SegmentEngine {
     dropIndex: number,
     seatsCount: number
   ): Promise<boolean> {
+    if (seatsCount < 1) return false;
+
+    // Release any expired holds first
+    await this.releaseExpiredHolds();
+
     const startSeq = pickupIndex + 1;
     const endSeq = dropIndex;
 
-    // Find all matching segments
     const segments = await RideSegment.find({
       ride: rideId,
       sequenceOrder: { $gte: startSeq, $lte: endSeq },
-    });
+    }).sort({ sequenceOrder: 1 });
 
-    // Check that every segment has enough capacity
+    if (segments.length !== endSeq - startSeq + 1) {
+      return false;
+    }
+
+    // Quick pre-check
     for (const seg of segments) {
       if (seg.totalSeats - (seg.bookedSeats + seg.pendingSeats) < seatsCount) {
         return false;
       }
     }
 
-    // Increment pending seats
-    await RideSegment.updateMany(
-      {
-        ride: rideId,
-        sequenceOrder: { $gte: startSeq, $lte: endSeq },
-      },
-      {
-        $inc: { pendingSeats: seatsCount },
+    // Atomic two-phase reservation: update segments conditionally one-by-one.
+    // If any update fails due to a concurrent race condition, rollback previously touched segments.
+    const successfullyHeldSegments: any[] = [];
+
+    for (const seg of segments) {
+      const updated = await RideSegment.findOneAndUpdate(
+        {
+          _id: seg._id,
+          $expr: {
+            $lte: [{ $add: ['$bookedSeats', '$pendingSeats', seatsCount] }, '$totalSeats'],
+          },
+        },
+        {
+          $inc: { pendingSeats: seatsCount },
+        },
+        { new: true }
+      );
+
+      if (!updated) {
+        // Concurrency collision! Another customer acquired the last seat on this segment.
+        // Rollback all previously updated segments in this batch.
+        for (const rolledSeg of successfullyHeldSegments) {
+          await RideSegment.updateOne(
+            { _id: rolledSeg._id },
+            { $inc: { pendingSeats: -seatsCount } }
+          );
+        }
+        logger.warn(
+          { rideId, sequenceOrder: seg.sequenceOrder },
+          '[SegmentEngine] Concurrent hold collision averted. Rolled back reservation.'
+        );
+        return false;
       }
-    );
+
+      successfullyHeldSegments.push(updated);
+    }
 
     return true;
   }
@@ -172,7 +261,7 @@ export class SegmentEngine {
   }
 
   /**
-   * Releases held seats if payment fails or hold timer expires
+   * Releases held seats if payment fails or checkout is cancelled
    */
   static async releaseHeldSeats(
     rideId: Types.ObjectId | string,
@@ -195,7 +284,7 @@ export class SegmentEngine {
   }
 
   /**
-   * Releases booked seats on cancellation
+   * Releases booked seats on passenger or driver cancellation
    */
   static async releaseBookedSeats(
     rideId: Types.ObjectId | string,

@@ -3,11 +3,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { ENV } from './config/env.js';
+import { ENV, validateEnv } from './config/env.js';
 import { connectDB, disconnectDB } from './config/db.js';
 import { seedDatabase } from './seeders/seedData.js';
 import { User } from './models/User.js';
+import { SegmentEngine } from './services/segmentEngine.js';
 
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
@@ -27,7 +29,7 @@ const app = express();
 // Security HTTP Headers
 app.use(
   helmet({
-    contentSecurityPolicy: false, // Allows Firebase CDN & Leaflet maps
+    contentSecurityPolicy: false, // Allows Firebase CDN & Leaflet maps & Razorpay SDK
     crossOriginEmbedderPolicy: false,
   })
 );
@@ -36,22 +38,13 @@ app.use(
 app.use(httpLogger);
 
 // Allowed Production & Development Origins
-const allowedOrigins = [
-  'https://safarx.in',
-  'https://admin.safarx.in',
-  'https://driver.safarx.in',
-  'https://app.safarx.in',
-  'http://localhost:5000',
-  'http://localhost:3000',
-  'http://127.0.0.1:5000',
-  ENV.FRONTEND_URL,
-].filter(Boolean);
+const allowedOrigins = ENV.ALLOWED_ORIGINS;
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, curl, server-to-server webhooks)
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+      if (!origin || allowedOrigins.includes(origin) || ENV.NODE_ENV === 'development') {
         callback(null, true);
       } else {
         callback(new Error(`CORS blocked for origin: ${origin}`));
@@ -71,11 +64,10 @@ app.use(
   })
 );
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-if (process.env.NODE_ENV === 'development') {
+
+if (ENV.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
-
-import fs from 'fs';
 
 // Static Frontend Directory
 const possibleFrontendPaths = [
@@ -84,7 +76,7 @@ const possibleFrontendPaths = [
   path.resolve(process.cwd(), 'frontend'),
   path.resolve(process.cwd(), '../frontend'),
 ];
-const frontendDir = possibleFrontendPaths.find((p) => fs.existsSync(p)) || path.resolve(process.cwd(), '../frontend');
+const frontendDir = possibleFrontendPaths.find((p) => fs.existsSync(p)) || path.resolve(process.cwd(), 'frontend');
 
 if (fs.existsSync(frontendDir)) {
   app.use(express.static(frontendDir));
@@ -122,19 +114,36 @@ app.get('*', (req, res, next) => {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-// Global Server Instance for Graceful Shutdown
+// Global Server & Reaper Instances for Graceful Shutdown
 let serverInstance: any = null;
+let holdReaperInterval: NodeJS.Timeout | null = null;
 
 async function startServer() {
+  // 1. Strict Startup Environment Validation
+  validateEnv();
+
+  // 2. Connect Database
   await connectDB();
 
-  // Auto-seed if database is empty
+  // 3. Auto-seed only in development when empty, NEVER in production
   const userCount = await User.countDocuments();
-  if (userCount === 0) {
-    logger.info('[Server] Database is empty. Running initial seed...');
+  if (userCount === 0 && !ENV.IS_PRODUCTION && (process.env.AUTO_SEED === 'true' || ENV.NODE_ENV === 'development')) {
+    logger.info('[Server] Development database is empty. Running initial test seed...');
     await seedDatabase();
   }
 
+  // 4. Start Expired Seat Hold Reaper Worker (runs every 60 seconds)
+  holdReaperInterval = setInterval(() => {
+    SegmentEngine.releaseExpiredHolds().catch((err) => {
+      logger.error({ error: err.message }, '[HoldReaper] Error releasing expired holds');
+    });
+  }, 60000);
+  holdReaperInterval.unref();
+
+  // Initial immediate sweep of expired holds
+  SegmentEngine.releaseExpiredHolds().catch(() => {});
+
+  // 5. Start HTTP Listener
   serverInstance = app.listen(ENV.PORT, () => {
     logger.info({
       port: ENV.PORT,
@@ -146,7 +155,7 @@ async function startServer() {
 
   serverInstance.on('error', (err: NodeJS.ErrnoException) => {
     if (err.code === 'EADDRINUSE') {
-      logger.error(`[Server] Port ${ENV.PORT} is already in use. An instance of SafarX is already running on this port.`);
+      logger.error(`[Server] Port ${ENV.PORT} is already in use.`);
     } else {
       logger.error({ error: err.message }, '[Server] Listen error occurred.');
     }
@@ -159,6 +168,11 @@ async function startServer() {
 // Graceful Shutdown Handler
 async function gracefulShutdown(signal: string) {
   logger.info({ signal }, `Received ${signal}. Starting graceful shutdown...`);
+
+  if (holdReaperInterval) {
+    clearInterval(holdReaperInterval);
+    holdReaperInterval = null;
+  }
 
   if (serverInstance) {
     serverInstance.close(async () => {
@@ -197,3 +211,4 @@ process.on('uncaughtException', (err: Error) => {
 
 startServer();
 
+export { app, startServer, gracefulShutdown };

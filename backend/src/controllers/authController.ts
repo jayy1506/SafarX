@@ -38,7 +38,7 @@ export class AuthController {
 
       const fbUser = await verifyFirebaseIdToken(idToken);
       if (!fbUser) {
-        res.status(401).json({ success: false, message: 'Invalid or expired Firebase token' });
+        res.status(401).json({ success: false, message: 'Invalid or expired Firebase authentication token' });
         return;
       }
 
@@ -58,13 +58,14 @@ export class AuthController {
       });
 
       if (!user) {
-        // Create user
-        const userRole: UserRole = role === 'DRIVER' ? 'DRIVER' : role === 'ADMIN' ? 'ADMIN' : 'CUSTOMER';
+        // Enforce role security: public login CANNOT create an ADMIN
+        const userRole: UserRole = role === 'DRIVER' ? 'DRIVER' : 'CUSTOMER';
+
         user = await User.create({
           fullName: name,
           phone,
           email,
-          password: `fb_auth_${Date.now()}`,
+          password: `fb_auth_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
           role: userRole,
         });
 
@@ -74,20 +75,27 @@ export class AuthController {
             drivingLicenseNumber: `DL-MH31-${Math.floor(100000 + Math.random() * 900000)}`,
             licenseExpiry: new Date('2032-12-31'),
             governmentIdNumber: `UID-${Math.floor(100000000000 + Math.random() * 900000000000)}`,
-            verificationStatus: 'APPROVED',
+            verificationStatus: 'PENDING',
           });
 
-          await Vehicle.create({
-            driver: driverProfile._id,
-            vehicleNumber: vehicleNumber || 'MH 31 SX 9999',
-            brand: vehicleBrand || 'Maruti Suzuki',
-            model: vehicleModel || 'Dzire',
-            color: 'White',
-            totalSeats: vehicleSeats || 4,
-            rcNumber: `RC-${vehicleNumber || 'MH31SX9999'}`,
-            status: 'APPROVED',
-          });
+          if (vehicleNumber) {
+            await Vehicle.create({
+              driver: driverProfile._id,
+              vehicleNumber: vehicleNumber.toUpperCase().trim(),
+              brand: vehicleBrand || 'Maruti Suzuki',
+              model: vehicleModel || 'Dzire',
+              color: 'White',
+              totalSeats: vehicleSeats || 4,
+              rcNumber: `RC-${vehicleNumber.toUpperCase().trim()}`,
+              status: 'PENDING',
+            });
+          }
         }
+      }
+
+      if (!user.isActive) {
+        res.status(401).json({ success: false, message: 'This account has been deactivated.' });
+        return;
       }
 
       const token = generateToken(user);
@@ -108,12 +116,34 @@ export class AuthController {
       res.status(500).json({ success: false, message: error.message });
     }
   }
+
+  /**
+   * Direct Email/Phone & Password Registration
+   */
   static async register(req: Request, res: Response): Promise<void> {
     try {
-      const { fullName, phone, email, password, role, drivingLicenseNumber, licenseExpiry, governmentIdNumber, vehicleNumber, vehicleBrand, vehicleModel, vehicleSeats } = req.body;
+      const {
+        fullName,
+        phone,
+        email,
+        password,
+        role,
+        drivingLicenseNumber,
+        licenseExpiry,
+        governmentIdNumber,
+        vehicleNumber,
+        brand,
+        model,
+        vehicleSeats,
+      } = req.body;
 
       if (!fullName || !phone || !email || !password) {
-        res.status(400).json({ success: false, message: 'All required fields must be provided' });
+        res.status(400).json({ success: false, message: 'Full name, phone, email, and password are required' });
+        return;
+      }
+
+      if (password.length < 6) {
+        res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
         return;
       }
 
@@ -126,11 +156,13 @@ export class AuthController {
           { phone: { $in: phoneVariants } },
         ],
       });
+
       if (existingUser) {
-        res.status(400).json({ success: false, message: 'User with this email or phone already exists' });
+        res.status(400).json({ success: false, message: 'User with this email or phone number already exists' });
         return;
       }
 
+      // Public registration CANNOT self-assign ADMIN
       const userRole: UserRole = role === 'DRIVER' ? 'DRIVER' : 'CUSTOMER';
 
       const user = await User.create({
@@ -141,12 +173,11 @@ export class AuthController {
         role: userRole,
       });
 
-      let driverProfile = null;
       if (userRole === 'DRIVER') {
-        driverProfile = await Driver.create({
+        const driverProfile = await Driver.create({
           user: user._id,
           drivingLicenseNumber: drivingLicenseNumber || `DL-MH31-${Math.floor(100000 + Math.random() * 900000)}`,
-          licenseExpiry: licenseExpiry ? new Date(licenseExpiry) : new Date('2030-12-31'),
+          licenseExpiry: licenseExpiry ? new Date(licenseExpiry) : new Date('2032-12-31'),
           governmentIdNumber: governmentIdNumber || `UID-${Math.floor(100000000000 + Math.random() * 900000000000)}`,
           verificationStatus: 'PENDING',
         });
@@ -154,13 +185,13 @@ export class AuthController {
         if (vehicleNumber) {
           await Vehicle.create({
             driver: driverProfile._id,
-            vehicleNumber,
-            brand: vehicleBrand || 'Maruti Suzuki',
-            model: vehicleModel || 'Swift Dzire',
+            vehicleNumber: vehicleNumber.toUpperCase().trim(),
+            brand: brand || 'Maruti Suzuki',
+            model: model || 'Swift Dzire',
             color: 'White',
-            totalSeats: vehicleSeats || 4,
-            rcNumber: `RC-${vehicleNumber}`,
-            status: 'APPROVED',
+            totalSeats: vehicleSeats ? Number(vehicleSeats) : 4,
+            rcNumber: `RC-${vehicleNumber.toUpperCase().trim()}`,
+            status: 'PENDING',
           });
         }
       }
@@ -184,6 +215,9 @@ export class AuthController {
     }
   }
 
+  /**
+   * Login with email or phone + password
+   */
   static async login(req: Request, res: Response): Promise<void> {
     try {
       const { emailOrPhone, password } = req.body;
@@ -208,6 +242,11 @@ export class AuthController {
         return;
       }
 
+      if (!user.isActive) {
+        res.status(401).json({ success: false, message: 'Account is deactivated' });
+        return;
+      }
+
       const isMatch = await user.comparePassword(password);
       if (!isMatch) {
         res.status(401).json({ success: false, message: 'Invalid credentials' });
@@ -216,9 +255,10 @@ export class AuthController {
 
       const token = generateToken(user);
 
-      let driverProfile = null;
+      let driverStatus = undefined;
       if (user.role === 'DRIVER') {
-        driverProfile = await Driver.findOne({ user: user._id });
+        const driverProfile = await Driver.findOne({ user: user._id });
+        driverStatus = driverProfile?.verificationStatus;
       }
 
       res.json({
@@ -231,7 +271,7 @@ export class AuthController {
           email: user.email,
           phone: user.phone,
           role: user.role,
-          driverStatus: driverProfile?.verificationStatus,
+          driverStatus,
         },
       });
     } catch (error: any) {
@@ -239,6 +279,9 @@ export class AuthController {
     }
   }
 
+  /**
+   * Get authenticated user profile
+   */
   static async getMe(req: AuthRequest, res: Response): Promise<void> {
     try {
       if (!req.user) {
@@ -264,45 +307,6 @@ export class AuthController {
           emergencyContact: req.user.emergencyContact,
           savedPickups: req.user.savedPickups,
           ...extraData,
-        },
-      });
-    } catch (error: any) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  /**
-   * Fast Switcher for Developer / Showcase demo convenience
-   */
-  static async switchDemoRole(req: Request, res: Response): Promise<void> {
-    try {
-      const { role } = req.params;
-      let targetUser = null;
-
-      if (role === 'ADMIN') {
-        targetUser = await User.findOne({ role: 'ADMIN' });
-      } else if (role === 'DRIVER') {
-        targetUser = await User.findOne({ role: 'DRIVER' });
-      } else {
-        targetUser = await User.findOne({ role: 'CUSTOMER' });
-      }
-
-      if (!targetUser) {
-        res.status(404).json({ success: false, message: `No demo account found for role ${role}. Please run seeder.` });
-        return;
-      }
-
-      const token = generateToken(targetUser);
-      res.json({
-        success: true,
-        message: `Switched demo identity to ${targetUser.fullName} (${targetUser.role})`,
-        token,
-        user: {
-          id: targetUser._id,
-          fullName: targetUser.fullName,
-          email: targetUser.email,
-          phone: targetUser.phone,
-          role: targetUser.role,
         },
       });
     } catch (error: any) {

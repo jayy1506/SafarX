@@ -203,18 +203,13 @@ export const App = {
   },
 
   async switchDemoAccount(role) {
-    try {
-      const res = await API.post(`/auth/switch-demo/${role}`, {});
-      API.setToken(res.token);
-      State.setUser(res.user);
-      State.setRole(role);
-
-      this.closeModal('modal-auth');
-      this.showToast(`Active Platform: ${role}`, 'info');
-      this.updateUserUI(res.user);
-      this.renderActivePlatform();
-    } catch (err) {
-      this.showToast(`Switch failed: ${err.message}`, 'error');
+    this.closeModal('modal-auth');
+    if (role === 'ADMIN') {
+      window.location.href = '/admin-login.html';
+    } else if (role === 'DRIVER') {
+      window.location.href = '/driver-login.html';
+    } else {
+      window.location.href = '/login.html';
     }
   },
 

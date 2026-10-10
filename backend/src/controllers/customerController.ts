@@ -10,8 +10,10 @@ import { Driver } from '../models/Driver.js';
 import { SegmentEngine } from '../services/segmentEngine.js';
 import { FareCalculator } from '../services/fareCalculator.js';
 import { PaymentService } from '../services/paymentService.js';
+import { RazorpayService } from '../services/razorpay.service.js';
 import { RefundService } from '../services/refundService.js';
 import { NotificationService } from '../services/notificationService.js';
+import { logger } from '../utils/logger.js';
 
 export class CustomerController {
   static async getRoutesAndStops(req: AuthRequest, res: Response): Promise<void> {
@@ -179,6 +181,7 @@ export class CustomerController {
         platformCommission: fareInfo.platformCommission,
         driverEarnings: fareInfo.driverEarnings,
         totalAmount: fareInfo.totalAmount,
+        amountInPaise: Math.round(fareInfo.totalAmount * 100),
         bookingStatus: 'PENDING_PAYMENT',
         paymentStatus: 'PENDING',
         holdExpiresAt,
@@ -186,7 +189,7 @@ export class CustomerController {
       });
 
       // Generate Razorpay Order
-      const paymentOrder = await PaymentService.createOrder(booking);
+      const paymentOrder = await RazorpayService.createOrder(booking);
 
       res.status(201).json({
         success: true,
@@ -214,14 +217,23 @@ export class CustomerController {
     try {
       const { bookingId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
 
-      if (!bookingId || !razorpayOrderId) {
-        res.status(400).json({ success: false, message: 'bookingId and razorpayOrderId are required' });
+      if (!bookingId || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+        res.status(400).json({
+          success: false,
+          message: 'bookingId, razorpayOrderId, razorpayPaymentId, and razorpaySignature are required',
+        });
         return;
       }
 
       const booking = await Booking.findById(bookingId).populate('ride');
       if (!booking) {
         res.status(404).json({ success: false, message: 'Booking record not found' });
+        return;
+      }
+
+      // Check ownership
+      if (!booking.customer.equals(req.user!._id) && req.user!.role !== 'ADMIN') {
+        res.status(403).json({ success: false, message: 'Forbidden. You do not own this booking.' });
         return;
       }
 
@@ -234,8 +246,8 @@ export class CustomerController {
       const verifyResult = await PaymentService.verifyAndCapturePayment(
         bookingId,
         razorpayOrderId,
-        razorpayPaymentId || `pay_test_${Date.now()}`,
-        razorpaySignature || 'sim_sig_valid'
+        razorpayPaymentId,
+        razorpaySignature
       );
 
       if (!verifyResult.success) {
@@ -265,7 +277,9 @@ export class CustomerController {
 
       // Dispatch Notifications
       const ride = booking.ride as any;
-      await NotificationService.notifyBookingConfirmed(req.user!._id, ride.driver, booking);
+      if (ride?.driver) {
+        await NotificationService.notifyBookingConfirmed(req.user!._id, ride.driver, booking);
+      }
 
       res.json({
         success: true,
@@ -336,8 +350,25 @@ export class CustomerController {
         reason: reason || 'Customer requested cancellation',
         refundAmount: refundCalc.refundAmount,
         penaltyAmount: refundCalc.penaltyAmount,
-        refundStatus: refundCalc.refundAmount > 0 ? 'COMPLETED' : 'NOT_APPLICABLE',
+        refundStatus: refundCalc.refundAmount > 0 ? 'INITIATED' : 'NOT_APPLICABLE',
       };
+
+      // Execute gateway refund if booking was confirmed and refund is applicable
+      if (booking.payment && refundCalc.refundAmount > 0) {
+        try {
+          const payment = await Payment.findById(booking.payment);
+          if (payment && payment.status === 'CAPTURED') {
+            await RazorpayService.processRefund(payment, refundCalc.refundAmount, {
+              bookingNumber: booking.bookingNumber,
+              reason: reason || 'Customer cancellation',
+            });
+            booking.cancellation.refundStatus = 'COMPLETED';
+          }
+        } catch (refundErr) {
+          logger.warn({ error: (refundErr as any).message }, 'Gateway refund processing error during cancellation');
+        }
+      }
+
       await booking.save();
 
       // Notify Driver

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import mongoose from 'mongoose';
+import { ENV } from '../config/env.js';
 
 const router = Router();
 
@@ -14,7 +15,7 @@ router.get('/', (req: Request, res: Response) => {
     service: 'safarx-api',
     uptime: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
+    environment: ENV.NODE_ENV,
   });
 });
 
@@ -33,15 +34,12 @@ router.get('/live', (req: Request, res: Response) => {
 
 /**
  * @route   GET /api/health/ready
- * @desc    Readiness Check (Verifies MongoDB & Dependency Connectivity)
+ * @desc    Readiness Check (Verifies MongoDB Connectivity without revealing internal infrastructure details)
  * @access  Public
  */
 router.get('/ready', async (req: Request, res: Response) => {
   const startTime = Date.now();
   const dbState = mongoose.connection.readyState;
-  
-  // Mongoose readyState values:
-  // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
   const isDbConnected = dbState === 1;
 
   if (!isDbConnected) {
@@ -51,20 +49,17 @@ router.get('/ready', async (req: Request, res: Response) => {
       ready: false,
       database: {
         status: 'disconnected',
-        readyState: dbState,
       },
-      message: 'Database is not connected. Service is not ready to accept traffic.',
+      message: 'Service is not ready to accept traffic.',
       timestamp: new Date().toISOString(),
     });
   }
 
   try {
-    // Perform active ping on MongoDB admin/command
     if (mongoose.connection.db) {
       await mongoose.connection.db.admin().ping();
     }
     const dbLatencyMs = Date.now() - startTime;
-
     const memoryUsage = process.memoryUsage();
 
     return res.status(200).json({
@@ -75,8 +70,6 @@ router.get('/ready', async (req: Request, res: Response) => {
       database: {
         status: 'connected',
         latencyMs: dbLatencyMs,
-        host: mongoose.connection.host || 'cluster',
-        name: mongoose.connection.name || 'safarx_db',
       },
       system: {
         memoryHeapUsedMB: Math.round((memoryUsage.heapUsed / 1024 / 1024) * 100) / 100,
@@ -84,14 +77,13 @@ router.get('/ready', async (req: Request, res: Response) => {
       },
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  } catch {
     return res.status(503).json({
       status: 'error',
       service: 'safarx-api',
       ready: false,
       database: {
         status: 'unreachable',
-        error: error.message,
       },
       message: 'Failed to communicate with database cluster.',
       timestamp: new Date().toISOString(),

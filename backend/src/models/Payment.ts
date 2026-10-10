@@ -10,12 +10,14 @@ export interface IPayment extends Document {
   razorpayPaymentId?: string;
   razorpaySignature?: string;
   amount: number; // in INR
+  amountInPaise: number; // in integer paise (1 INR = 100 paise)
   currency: string;
   method: string;
   status: PaymentRecordStatus;
   gatewayResponse?: Record<string, any>;
   refundId?: string;
   refundAmount?: number;
+  refundAmountInPaise?: number;
   failureReason?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -30,6 +32,7 @@ const PaymentSchema = new Schema<IPayment>(
     razorpayPaymentId: { type: String },
     razorpaySignature: { type: String },
     amount: { type: Number, required: true },
+    amountInPaise: { type: Number, required: true },
     currency: { type: String, default: 'INR' },
     method: { type: String, default: 'UPI' },
     status: {
@@ -41,6 +44,7 @@ const PaymentSchema = new Schema<IPayment>(
     gatewayResponse: { type: Schema.Types.Mixed },
     refundId: { type: String },
     refundAmount: { type: Number, default: 0 },
+    refundAmountInPaise: { type: Number, default: 0 },
     failureReason: { type: String },
   },
   { timestamps: true }
@@ -52,5 +56,3 @@ PaymentSchema.index({ booking: 1, status: 1 });
 PaymentSchema.index({ razorpayPaymentId: 1 }, { sparse: true });
 
 export const Payment = mongoose.model<IPayment>('Payment', PaymentSchema);
-
-

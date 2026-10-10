@@ -229,42 +229,69 @@ export const CustomerApp = {
       };
 
       document.getElementById('modal-customer-checkout').classList.remove('active');
-      this.openRazorpayModal(res.booking, res.paymentOrder);
+      this.openRazorpayCheckout(res.booking, res.paymentOrder);
     } catch (err) {
       window.SawangiApp.showToast(err.message, 'error');
     }
   },
 
-  openRazorpayModal(booking, paymentOrder) {
-    document.getElementById('rzp-order-id-display').textContent = paymentOrder.orderId;
-    document.getElementById('rzp-amount-display').textContent = `₹${booking.totalAmount}`;
-    document.getElementById('modal-razorpay-simulation').classList.add('active');
-  },
+  openRazorpayCheckout(booking, paymentOrder) {
+    if (typeof Razorpay === 'undefined') {
+      window.SawangiApp?.showToast('Razorpay Checkout SDK is still loading. Please check internet connection.', 'error');
+      return;
+    }
 
-  async handleSimulatePaymentSuccess() {
-    if (!this.pendingPaymentData) return;
-    const { bookingId, orderId } = this.pendingPaymentData;
-
+    const self = this;
+    let user = {};
     try {
-      // Simulate Razorpay payment id and signature
-      const paymentId = `pay_${Date.now()}`;
-      const signature = `sim_sig_valid`;
+      user = JSON.parse(localStorage.getItem('sawangi_user') || '{}');
+    } catch {}
 
-      const res = await API.post('/customer/payments/verify', {
-        bookingId,
-        razorpayOrderId: orderId,
-        razorpayPaymentId: paymentId,
-        razorpaySignature: signature,
-      });
+    const options = {
+      key: paymentOrder.keyId,
+      amount: paymentOrder.amount, // in integer paise
+      currency: paymentOrder.currency || 'INR',
+      name: 'SafarX Mobility',
+      description: `${booking.pickupStop} ➔ ${booking.dropStop} (${booking.seatsBooked} Seat)`,
+      order_id: paymentOrder.orderId,
+      handler: async function (response) {
+        try {
+          window.SawangiApp?.showToast('Verifying payment cryptographically with server...', 'info');
+          const verifyRes = await API.post('/customer/payments/verify', {
+            bookingId: booking.id,
+            razorpayOrderId: response.razorpay_order_id,
+            razorpayPaymentId: response.razorpay_payment_id,
+            razorpaySignature: response.razorpay_signature,
+          });
 
-      document.getElementById('modal-razorpay-simulation').classList.remove('active');
+          self.openConfirmationModal(verifyRes.booking);
+          await self.loadMyBookings();
+        } catch (err) {
+          window.SawangiApp?.showToast('Payment verification failed: ' + err.message, 'error');
+          await self.loadMyBookings();
+        }
+      },
+      prefill: {
+        name: user.fullName || '',
+        email: user.email || '',
+        contact: user.phone || '',
+      },
+      theme: {
+        color: '#FF6B00',
+      },
+      modal: {
+        ondismiss: async function () {
+          window.SawangiApp?.showToast('Payment window closed. Booking will cancel upon hold expiry.', 'warning');
+          await self.loadMyBookings();
+        },
+      },
+    };
 
-      // Open Confirmed Dialog with OTP
-      this.openConfirmationModal(res.booking);
-      await this.loadMyBookings();
-    } catch (err) {
-      window.SawangiApp.showToast(err.message, 'error');
-    }
+    const rzp = new Razorpay(options);
+    rzp.on('payment.failed', function (resp) {
+      window.SawangiApp?.showToast('Payment failed: ' + (resp.error?.description || 'Transaction declined'), 'error');
+    });
+    rzp.open();
   },
 
   openConfirmationModal(booking) {

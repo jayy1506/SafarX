@@ -1,9 +1,7 @@
 import { initializeApp, cert, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { ENV } from './env.js';
-
 import fs from 'fs';
-import path from 'path';
 
 let firebaseApp: App | null = null;
 
@@ -44,13 +42,13 @@ export function initializeFirebase(): App | null {
 
     return firebaseApp;
   } catch (error: any) {
-    console.warn('[Firebase Init Warning] Running in fallback mode:', error.message);
+    console.warn('[Firebase Init Warning]', error.message);
     return null;
   }
 }
 
 export async function verifyFirebaseIdToken(idToken: string): Promise<{ uid: string; email?: string; phone_number?: string; name?: string } | null> {
-  if (!idToken) return null;
+  if (!idToken || typeof idToken !== 'string') return null;
 
   try {
     const app = initializeFirebase();
@@ -64,39 +62,40 @@ export async function verifyFirebaseIdToken(idToken: string): Promise<{ uid: str
       };
     }
   } catch (err: any) {
-    console.warn('[Firebase Verification Warning]', err.message);
+    if (ENV.IS_PRODUCTION) {
+      console.warn('[Firebase Verification Failed in Production]', err.message);
+      return null;
+    }
   }
 
-  // Support test tokens or simulated Firebase JWTs in development
-  if (
+  // In production, reject any non-verified tokens immediately
+  if (ENV.IS_PRODUCTION) {
+    return null;
+  }
+
+  // Development & Test Mode Support: only parse formatted test tokens
+  const isTestToken =
     idToken.startsWith('test_firebase_') ||
     idToken.startsWith('mock_fb_') ||
     idToken.startsWith('test_phone_') ||
-    idToken.startsWith('test_google_') ||
-    ENV.NODE_ENV === 'development'
-  ) {
+    idToken.startsWith('test_google_');
+
+  if (isTestToken) {
     try {
       const parts = idToken.split('.');
       if (parts.length >= 2) {
         const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
         const phone = payload.phone_number || payload.phone;
         return {
-          uid: payload.user_id || payload.sub || `fb_${Date.now()}`,
+          uid: payload.user_id || payload.sub || `fb_test_${Date.now()}`,
           email: payload.email,
           phone_number: phone,
-          name: payload.name || payload.displayName || 'SafarX User',
+          name: payload.name || payload.displayName || 'SafarX Test User',
         };
       }
     } catch {
-      // fallback
+      return null;
     }
-
-    return {
-      uid: `fb_${Date.now()}`,
-      phone_number: '+919890123456',
-      email: 'safarx.user@firebase.app',
-      name: 'SafarX Traveler',
-    };
   }
 
   return null;

@@ -7,6 +7,7 @@ export type BookingStatus =
   | 'NO_SHOW'
   | 'CANCELLED_BY_CUSTOMER'
   | 'CANCELLED_BY_DRIVER'
+  | 'CANCELLED_BY_SYSTEM'
   | 'COMPLETED';
 
 export type PaymentStatus =
@@ -32,6 +33,7 @@ export interface IBooking extends Document {
   platformCommission: number;
   driverEarnings: number;
   totalAmount: number;
+  amountInPaise?: number;
   bookingStatus: BookingStatus;
   paymentStatus: PaymentStatus;
   payment?: Types.ObjectId;
@@ -67,6 +69,7 @@ const BookingSchema = new Schema<IBooking>(
     platformCommission: { type: Number, required: true, default: 0 },
     driverEarnings: { type: Number, required: true, default: 0 },
     totalAmount: { type: Number, required: true },
+    amountInPaise: { type: Number },
     bookingStatus: {
       type: String,
       enum: [
@@ -76,6 +79,7 @@ const BookingSchema = new Schema<IBooking>(
         'NO_SHOW',
         'CANCELLED_BY_CUSTOMER',
         'CANCELLED_BY_DRIVER',
+        'CANCELLED_BY_SYSTEM',
         'COMPLETED',
       ],
       default: 'PENDING_PAYMENT',
@@ -115,4 +119,3 @@ BookingSchema.index({ bookingStatus: 1, holdExpiresAt: 1 });
 BookingSchema.index({ paymentStatus: 1, createdAt: -1 });
 
 export const Booking = mongoose.model<IBooking>('Booking', BookingSchema);
-

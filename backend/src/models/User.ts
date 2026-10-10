@@ -43,7 +43,23 @@ const UserSchema = new Schema<IUser>(
     savedPickups: [{ type: String }],
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: {
+      transform: (_, ret) => {
+        delete (ret as any).password;
+        delete (ret as any).__v;
+        return ret;
+      },
+    },
+    toObject: {
+      transform: (_, ret) => {
+        delete (ret as any).password;
+        delete (ret as any).__v;
+        return ret;
+      },
+    },
+  }
 );
 
 UserSchema.pre<IUser>('save', async function (next) {
