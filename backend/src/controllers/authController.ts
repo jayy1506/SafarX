@@ -137,8 +137,8 @@ export class AuthController {
         vehicleSeats,
       } = req.body;
 
-      if (!fullName || !phone || !email || !password) {
-        res.status(400).json({ success: false, message: 'Full name, phone, email, and password are required' });
+      if (!fullName || !email || !password) {
+        res.status(400).json({ success: false, message: 'Full name, email, and password are required' });
         return;
       }
 
@@ -148,17 +148,10 @@ export class AuthController {
       }
 
       const cleanEmail = email.toLowerCase().trim();
-      const phoneVariants = getPhoneVariants(phone);
-
-      const existingUser = await User.findOne({
-        $or: [
-          { email: cleanEmail },
-          { phone: { $in: phoneVariants } },
-        ],
-      });
+      const existingUser = await User.findOne({ email: cleanEmail });
 
       if (existingUser) {
-        res.status(400).json({ success: false, message: 'User with this email or phone number already exists' });
+        res.status(400).json({ success: false, message: 'User with this email already exists' });
         return;
       }
 
@@ -167,7 +160,7 @@ export class AuthController {
 
       const user = await User.create({
         fullName: fullName.trim(),
-        phone: phone.trim(),
+        phone: phone ? phone.trim() : '',
         email: cleanEmail,
         password,
         role: userRole,

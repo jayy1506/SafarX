@@ -5,7 +5,7 @@ export type UserRole = 'ADMIN' | 'DRIVER' | 'CUSTOMER';
 
 export interface IUser extends Document {
   fullName: string;
-  phone: string;
+  phone?: string;
   email: string;
   password?: string;
   role: UserRole;
@@ -25,7 +25,7 @@ export interface IUser extends Document {
 const UserSchema = new Schema<IUser>(
   {
     fullName: { type: String, required: true, trim: true },
-    phone: { type: String, required: true, unique: true, trim: true },
+    phone: { type: String, required: false, default: '', trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true },
     role: {

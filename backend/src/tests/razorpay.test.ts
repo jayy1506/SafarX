@@ -8,6 +8,7 @@ import { ENV } from '../config/env.js';
 import { WebhookEvent } from '../models/WebhookEvent.js';
 import { Payment } from '../models/Payment.js';
 import { Booking } from '../models/Booking.js';
+import { razorpayClient } from '../config/razorpay.js';
 import mongoose from 'mongoose';
 
 before(async () => {
@@ -139,6 +140,15 @@ test('PaymentController.createOrder: creates live Razorpay order for >= 100 pais
   let statusCode = 0;
   let responseData: any = null;
 
+  const originalCreate = razorpayClient.orders.create;
+  razorpayClient.orders.create = (async (opts: any) => ({
+    id: 'order_test_mock_1500',
+    amount: opts.amount,
+    currency: opts.currency || 'INR',
+    receipt: opts.receipt,
+    status: 'created',
+  })) as any;
+
   const mockReq: any = { body: { amount: 1500, currency: 'INR', receipt: 'test_rcpt_001' } };
   const mockRes: any = {
     status(code: number) {
@@ -151,11 +161,15 @@ test('PaymentController.createOrder: creates live Razorpay order for >= 100 pais
     },
   };
 
-  await PaymentController.createOrder(mockReq, mockRes);
-  assert.equal(statusCode, 200);
-  assert.ok(responseData.order_id);
-  assert.equal(responseData.amount, 1500);
-  assert.equal(responseData.currency, 'INR');
+  try {
+    await PaymentController.createOrder(mockReq, mockRes);
+    assert.equal(statusCode, 200);
+    assert.ok(responseData.order_id);
+    assert.equal(responseData.amount, 1500);
+    assert.equal(responseData.currency, 'INR');
+  } finally {
+    razorpayClient.orders.create = originalCreate;
+  }
 });
 
 test('PaymentController.verifyPayment: returns 400 on missing parameters', async () => {

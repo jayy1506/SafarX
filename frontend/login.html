@@ -243,53 +243,12 @@
     </div>
 
     <div class="tab-row" role="tablist">
-      <button class="tab-btn active" data-tab="phone" role="tab">📱 Phone</button>
-      <button class="tab-btn" data-tab="email" role="tab">✉️ Email</button>
+      <button class="tab-btn active" data-tab="email" role="tab">✉️ Sign In</button>
       <button class="tab-btn" data-tab="signup" role="tab">✨ Sign Up</button>
     </div>
 
-    <!-- Phone OTP -->
-    <div class="tab-pane active" id="pane-phone">
-      <div id="phone-step1">
-        <form id="phone-form">
-          <div class="form-group">
-            <label for="phone-input">Mobile Number</label>
-            <div class="input-wrap">
-              <span class="input-prefix">+91</span>
-              <input type="tel" id="phone-input" class="with-prefix" placeholder="9890123456" maxlength="10" autocomplete="tel" required />
-            </div>
-          </div>
-          <button type="submit" class="btn btn-primary" id="send-otp-btn">
-            <span class="spinner"></span>
-            <span class="btn-text">📲 Send OTP</span>
-          </button>
-        </form>
-      </div>
-      <div id="phone-step2" style="display:none;">
-        <div class="otp-target">
-          <div class="phone-num" id="otp-target-num">+91 9890123456</div>
-          <div class="hint">OTP sent · Test code: <strong>123456</strong></div>
-        </div>
-        <form id="otp-form">
-          <div class="form-group">
-            <label for="otp-input">6-Digit Code</label>
-            <input type="text" id="otp-input" class="otp-input" placeholder="••••••" maxlength="6" inputmode="numeric" required />
-          </div>
-          <div class="form-group">
-            <label for="otp-name">Full Name (optional)</label>
-            <input type="text" id="otp-name" placeholder="Jay Thakkar" />
-          </div>
-          <button type="submit" class="btn btn-primary" id="verify-btn">
-            <span class="spinner"></span>
-            <span class="btn-text">✅ Verify & Sign In</span>
-          </button>
-          <button type="button" class="btn btn-outline" onclick="showPhoneStep1()">← Change Number</button>
-        </form>
-      </div>
-    </div>
-
     <!-- Email -->
-    <div class="tab-pane" id="pane-email">
+    <div class="tab-pane active" id="pane-email">
       <form id="email-form">
         <div class="form-group">
           <label for="email-input">Email</label>
@@ -321,13 +280,6 @@
         <div class="form-group">
           <label for="su-email">Email</label>
           <input type="email" id="su-email" placeholder="jay@example.com" autocomplete="email" required />
-        </div>
-        <div class="form-group">
-          <label for="su-phone">Mobile</label>
-          <div class="input-wrap">
-            <span class="input-prefix">+91</span>
-            <input type="tel" id="su-phone" class="with-prefix" placeholder="9890123456" maxlength="10" autocomplete="tel" required />
-          </div>
         </div>
         <div class="form-group">
           <label for="su-pass">Password</label>
@@ -405,64 +357,7 @@
       });
     });
 
-    window._pendingPhone = null;
-    window._confirmationResult = null;
-    window.showPhoneStep1 = () => {
-      document.getElementById('phone-step1').style.display = 'block';
-      document.getElementById('phone-step2').style.display = 'none';
-    };
-
-    document.getElementById('phone-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const raw = document.getElementById('phone-input').value.trim();
-      const phone = raw.startsWith('+91') ? raw : `+91${raw}`;
-      const btn = document.getElementById('send-otp-btn');
-      setLoading(btn, true);
-      try {
-        if (!window.recaptchaVerifier) {
-          window.recaptchaVerifier = new RecaptchaVerifier(firebaseAuthInstance, 'send-otp-btn', { size: 'invisible' });
-        }
-        try {
-          window._confirmationResult = await signInWithPhoneNumber(firebaseAuthInstance, phone, window.recaptchaVerifier);
-        } catch (fbErr) {
-          console.warn('Firebase phone — test mode fallback:', fbErr.message);
-          window._confirmationResult = null;
-        }
-        window._pendingPhone = phone;
-        document.getElementById('otp-target-num').textContent = phone;
-        document.getElementById('phone-step1').style.display = 'none';
-        document.getElementById('phone-step2').style.display = 'block';
-        showToast('OTP sent to ' + phone, 'info');
-      } catch (err) {
-        showToast(err.message, 'error');
-      } finally {
-        setLoading(btn, false);
-      }
-    });
-
-    document.getElementById('otp-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const otp = document.getElementById('otp-input').value.trim();
-      const fullName = document.getElementById('otp-name').value.trim();
-      const phone = window._pendingPhone;
-      const btn = document.getElementById('verify-btn');
-      setLoading(btn, true);
-      try {
-        let idToken;
-        if (window._confirmationResult) {
-          const cred = await window._confirmationResult.confirm(otp);
-          idToken = await cred.user.getIdToken();
-        } else {
-          idToken = `test_phone_${Date.now()}.${btoa(JSON.stringify({ phone, name: fullName }))}.sig`;
-        }
-        const data = await apiPost('/auth/firebase-login', { idToken, phone, role: 'CUSTOMER', fullName: fullName || 'SafarX Traveler' });
-        onLoginSuccess(data);
-      } catch (err) {
-        showToast(err.message, 'error');
-      } finally {
-        setLoading(btn, false);
-      }
-    });
+    // Email login handler
 
     document.getElementById('email-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -506,12 +401,11 @@
       e.preventDefault();
       const fullName = document.getElementById('su-name').value.trim();
       const email = document.getElementById('su-email').value.trim();
-      const phone = document.getElementById('su-phone').value.trim();
       const password = document.getElementById('su-pass').value;
       const btn = document.getElementById('signup-btn');
       setLoading(btn, true);
       try {
-        const data = await apiPost('/auth/register', { fullName, email, phone, password, role: 'CUSTOMER' });
+        const data = await apiPost('/auth/register', { fullName, email, password, role: 'CUSTOMER' });
         onLoginSuccess(data);
       } catch (err) {
         showToast(err.message, 'error');

@@ -7,8 +7,9 @@
   "scripts": {
     "dev": "tsx watch backend/src/server.ts",
     "dev:backend": "tsx watch backend/src/server.ts",
-    "build": "tsc -p backend/tsconfig.json",
-    "start": "node backend/dist/server.js",
+    "build": "tsc -p tsconfig.json && node -e \"import('fs').then(fs => fs.cpSync('dist', 'backend/dist', {recursive: true, force: true}))\"",
+    "postinstall": "npm run build",
+    "start": "node dist/server.js",
     "seed": "tsx backend/src/seeders/seedData.ts",
     "test": "tsx --test backend/src/tests/**/*.test.ts"
   },
@@ -37,7 +38,8 @@
     "morgan": "^1.10.0",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
-    "razorpay": "^2.9.8"
+    "razorpay": "^2.9.8",
+    "typescript": "^5.7.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -46,7 +48,6 @@
     "@types/jsonwebtoken": "^9.0.8",
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.10.7",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "tsx": "^4.19.2"
   }
 }

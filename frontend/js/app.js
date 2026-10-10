@@ -12,16 +12,10 @@ export const App = {
     this.bindAuthEvents();
 
     const token = API.getToken();
-    const urlParams = new URLSearchParams(window.location.search);
-    const isDemoMode = urlParams.get('demo') === '1';
 
     if (!token) {
-      if (isDemoMode) {
-        await this.switchDemoAccount('CUSTOMER');
-      } else {
-        window.location.href = '/login.html';
-        return;
-      }
+      window.location.href = '/login.html';
+      return;
     } else {
       try {
         const me = await API.get('/auth/me');
@@ -137,47 +131,7 @@ export const App = {
       });
     });
 
-    // 1. Firebase Phone Form Step 1
-    const phoneForm = document.getElementById('firebase-phone-form');
-    if (phoneForm) {
-      phoneForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const phone = document.getElementById('fb-phone-input').value.trim();
-        const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
-
-        try {
-          await FirebaseAuth.sendPhoneOtp(formattedPhone);
-          document.getElementById('fb-target-phone').textContent = formattedPhone;
-          phoneForm.style.display = 'none';
-          document.getElementById('firebase-otp-form').style.display = 'block';
-        } catch (err) {
-          this.showToast(err.message, 'error');
-        }
-      });
-    }
-
-    // 2. Firebase OTP Form Step 2
-    const otpForm = document.getElementById('firebase-otp-form');
-    if (otpForm) {
-      otpForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const otp = document.getElementById('fb-otp-input').value.trim();
-        const role = document.getElementById('fb-role-select').value;
-        const phone = window._pendingFirebasePhone;
-
-        try {
-          const res = await FirebaseAuth.verifyPhoneOtp(otp, role, '', phone);
-          this.closeModal('modal-auth');
-          this.showToast(`Welcome to SafarX, ${res.user.fullName}!`, 'success');
-          this.updateUserUI(res.user);
-          this.renderActivePlatform();
-        } catch (err) {
-          this.showToast(err.message, 'error');
-        }
-      });
-    }
-
-    // 3. Email Login Form
+    // 1. Email Login Form
     const emailForm = document.getElementById('email-login-form');
     if (emailForm) {
       emailForm.addEventListener('submit', async (e) => {
@@ -197,19 +151,18 @@ export const App = {
       });
     }
 
-    // 4. Sign Up Form
+    // 2. Sign Up Form
     const signupForm = document.getElementById('signup-form');
     if (signupForm) {
       signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const fullName = document.getElementById('signup-name').value.trim();
         const email = document.getElementById('signup-email').value.trim();
-        const phone = document.getElementById('signup-phone').value.trim();
         const password = document.getElementById('signup-password').value;
         const role = document.getElementById('signup-role').value;
 
         try {
-          const res = await FirebaseAuth.registerUser({ fullName, email, phone, password, role });
+          const res = await FirebaseAuth.registerUser({ fullName, email, password, role });
           this.closeModal('modal-auth');
           this.showToast(`Welcome to SafarX, ${res.user.fullName}!`, 'success');
           this.updateUserUI(res.user);
@@ -221,7 +174,7 @@ export const App = {
     }
   },
 
-  openAuthModal(tab = 'phone') {
+  openAuthModal(tab = 'email') {
     const modal = document.getElementById('modal-auth');
     if (modal) {
       modal.classList.add('active');
@@ -239,34 +192,11 @@ export const App = {
       btn.classList.toggle('active', btn.getAttribute('data-auth-tab') === tab);
     });
 
-    const phoneEl = document.getElementById('auth-tab-content-phone');
     const emailEl = document.getElementById('auth-tab-content-email');
     const signupEl = document.getElementById('auth-tab-content-signup');
-    const demoEl = document.getElementById('auth-tab-content-demo');
 
-    if (phoneEl) phoneEl.style.display = tab === 'phone' ? 'block' : 'none';
     if (emailEl) emailEl.style.display = tab === 'email' ? 'block' : 'none';
     if (signupEl) signupEl.style.display = tab === 'signup' ? 'block' : 'none';
-    if (demoEl) demoEl.style.display = tab === 'demo' ? 'block' : 'none';
-
-    // Reset phone form if entering phone tab
-    if (tab === 'phone') {
-      const pForm = document.getElementById('firebase-phone-form');
-      const oForm = document.getElementById('firebase-otp-form');
-      if (pForm) pForm.style.display = 'block';
-      if (oForm) oForm.style.display = 'none';
-    }
-  },
-
-  async switchDemoAccount(role) {
-    this.closeModal('modal-auth');
-    if (role === 'ADMIN') {
-      window.location.href = '/admin-login.html';
-    } else if (role === 'DRIVER') {
-      window.location.href = '/driver-login.html';
-    } else {
-      window.location.href = '/login.html';
-    }
   },
 
   updateUserUI(user) {

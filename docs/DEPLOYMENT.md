@@ -30,7 +30,7 @@ This guide details the deployment architecture, infrastructure configuration, en
 ```
 
 - **Frontend:** Pure HTML/CSS/ES6 SPA served statically from `/frontend` via Express (`express.static`) or decoupled onto a CDN (Cloudflare Pages / Vercel / Netlify).
-- **Backend:** Node.js Express service built with TypeScript (`dist/` target via `npm run build`), running in native ES Module mode (`node dist/server.js`).
+- **Backend:** Node.js Express service built with TypeScript (`backend/dist/` target via `npm run build`), running in native ES Module mode (`npm start`).
 - **Database:** MongoDB Atlas (v6.0+) running a replica set to support multi-document transactions and atomic conditional updates.
 - **Payment Processing:** Razorpay Standard Checkout SDK on client, server-side cryptographic order creation, verification, and HMAC-verified webhooks.
 
@@ -42,7 +42,7 @@ This guide details the deployment architecture, infrastructure configuration, en
 |---|---|---|---|---|
 | **Render** | Web Service (Starter or Standard) | Fastest production setup, automated SSL, zero-downtime deploys | `npm install && npm run build` | `npm start` |
 | **Railway** | Pro Plan | Microservices, seamless environment variable injection | `npm install && npm run build` | `npm start` |
-| **AWS App Runner / ECS** | 1 vCPU / 2GB RAM Container | Enterprise compliance, autoscaling | Docker multi-stage build | `node dist/server.js` |
+| **AWS App Runner / ECS** | 1 vCPU / 2GB RAM Container | Enterprise compliance, autoscaling | Docker multi-stage build | `node backend/dist/server.js` |
 | **DigitalOcean App Platform** | Basic ($12/mo) or Pro | Predictable pricing, simple custom domain management | `npm install && npm run build` | `npm start` |
 
 ---
