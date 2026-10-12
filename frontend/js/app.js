@@ -4,7 +4,6 @@ import { FirebaseAuth } from './firebase-auth.js';
 import { AdminApp } from './admin.js';
 import { DriverApp } from './driver.js';
 import { CustomerApp } from './customer.js';
-import { initiateRazorpayCheckout } from './razorpay-checkout.js';
 
 export const App = {
   async init() {
@@ -65,61 +64,6 @@ export const App = {
         }
       });
     });
-
-    // Standalone Razorpay Checkout button handler
-    const rzpBtn = document.getElementById('rzp-checkout-btn');
-    if (rzpBtn) {
-      rzpBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const amountInput = document.getElementById('rzp-demo-amount');
-        const descInput = document.getElementById('rzp-demo-description');
-        const amountInRupees = parseFloat(amountInput?.value || '10');
-        const description = descInput?.value || 'SafarX Ride Payment';
-        const amountInPaise = Math.round(amountInRupees * 100);
-
-        const resultBox = document.getElementById('rzp-demo-result');
-        const statusEl = document.getElementById('rzp-demo-status');
-        const detailsEl = document.getElementById('rzp-demo-details');
-
-        if (resultBox) resultBox.style.display = 'none';
-
-        initiateRazorpayCheckout({
-          amount: amountInPaise,
-          currency: 'INR',
-          description,
-          onSuccess: (data) => {
-            if (resultBox && statusEl && detailsEl) {
-              resultBox.style.display = 'block';
-              resultBox.style.background = '#ECFDF5';
-              resultBox.style.borderColor = '#10B981';
-              statusEl.style.color = '#059669';
-              statusEl.textContent = '✅ Payment Verified & Order Confirmed!';
-              detailsEl.innerHTML = `<strong>Order ID:</strong> ${data.orderId}<br/><strong>Payment ID:</strong> ${data.paymentId}<br/><strong>Signature:</strong> ${data.signature.substring(0, 24)}... (HMAC-SHA256 Match)`;
-            }
-          },
-          onFailure: (err) => {
-            if (resultBox && statusEl && detailsEl) {
-              resultBox.style.display = 'block';
-              resultBox.style.background = '#FEF2F2';
-              resultBox.style.borderColor = '#EF4444';
-              statusEl.style.color = '#DC2626';
-              statusEl.textContent = '❌ Payment Failed / Verification Error';
-              detailsEl.textContent = err.message || 'Payment verification failed.';
-            }
-          },
-          onDismiss: () => {
-            if (resultBox && statusEl && detailsEl) {
-              resultBox.style.display = 'block';
-              resultBox.style.background = '#FFFBEB';
-              resultBox.style.borderColor = '#F59E0B';
-              statusEl.style.color = '#D97706';
-              statusEl.textContent = '⚠️ Payment Window Dismissed';
-              detailsEl.textContent = 'Transaction cancelled by customer.';
-            }
-          },
-        });
-      });
-    }
   },
 
   bindAuthEvents() {
