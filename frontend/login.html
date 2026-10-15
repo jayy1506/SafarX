@@ -247,12 +247,12 @@
       <button class="tab-btn" data-tab="signup" role="tab">✨ Sign Up</button>
     </div>
 
-    <!-- Email -->
+    <!-- Email / Phone -->
     <div class="tab-pane active" id="pane-email">
       <form id="email-form">
         <div class="form-group">
-          <label for="email-input">Email</label>
-          <input type="email" id="email-input" placeholder="jay@example.com" autocomplete="email" required />
+          <label for="email-input">Email or Phone Number</label>
+          <input type="text" id="email-input" placeholder="name@example.com or 10-digit phone" autocomplete="username" required />
         </div>
         <div class="form-group">
           <label for="pass-input">Password</label>
@@ -347,7 +347,11 @@
       localStorage.setItem('sawangi_token', data.token);
       localStorage.setItem('sawangi_user', JSON.stringify(data.user));
       showToast(`Welcome, ${data.user.fullName}! 🎉`, 'success');
-      setTimeout(() => { window.location.href = '/'; }, 900);
+      setTimeout(() => {
+        if (data.user?.role === 'ADMIN') window.location.href = '/admin-login.html';
+        else if (data.user?.role === 'DRIVER') window.location.href = '/driver-login.html';
+        else window.location.href = '/';
+      }, 900);
     }
 
     // Tabs
@@ -370,7 +374,6 @@
       setLoading(btn, true);
       try {
         const data = await apiPost('/auth/login', { emailOrPhone: email, password: pass });
-        if (data.user?.role !== 'CUSTOMER') throw new Error('Not a passenger account. Use the correct login page.');
         onLoginSuccess(data);
       } catch (err) {
         showToast(err.message, 'error');
@@ -417,9 +420,16 @@
       }
     });
 
-    // Auto-redirect if already logged in as customer
+    // Clear credentials if logout requested
+    if (window.location.search.includes('logout=true')) {
+      localStorage.removeItem('sawangi_token');
+      localStorage.removeItem('sawangi_user');
+    }
+
+    // Auto-redirect if already logged in as customer (unless explicitly re-authenticating)
     const token = localStorage.getItem('sawangi_token');
-    if (token) {
+    const params = new URLSearchParams(window.location.search);
+    if (token && !params.get('switch') && !params.get('relogin') && !params.get('logout')) {
       try {
         const u = JSON.parse(localStorage.getItem('sawangi_user') || '{}');
         if (u.role === 'CUSTOMER') window.location.href = '/';

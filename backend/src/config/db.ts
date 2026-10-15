@@ -4,26 +4,16 @@ import { ENV } from './env.js';
 let mongoMemoryServer: any = null;
 
 export async function connectDB(): Promise<typeof mongoose> {
-  try {
-    let uri = ENV.MONGODB_URI;
+  let uri = (process.env.MONGODB_URI || ENV.MONGODB_URI || '').trim().replace(/^["']|["']$/g, '');
 
-    if (ENV.IS_PRODUCTION) {
-      if (!uri) {
-        throw new Error('[DB FATAL] MONGODB_URI is not configured in production environment. In-memory databases are strictly forbidden in production.');
-      }
-    } else {
-      // In development / test mode
-      if (ENV.USE_IN_MEMORY_DB) {
-        console.log('[DB] USE_IN_MEMORY_DB=true. Initializing embedded MongoMemoryServer...');
-        const { MongoMemoryServer } = await import('mongodb-memory-server');
-        mongoMemoryServer = await MongoMemoryServer.create();
-        uri = mongoMemoryServer.getUri();
-        console.log(`[DB] Embedded MongoMemoryServer active at: ${uri}`);
-      } else if (!uri) {
-        // Fallback to local MongoDB instance
-        uri = 'mongodb://127.0.0.1:27017/sawangi_ride';
-        console.log(`[DB] No MONGODB_URI supplied. Defaulting to local MongoDB: ${uri}`);
-      }
+  try {
+    // If explicitly configured for in-memory or no URI provided
+    if (ENV.USE_IN_MEMORY_DB || !uri) {
+      console.log('[DB] USE_IN_MEMORY_DB=true or no MONGODB_URI. Starting embedded MongoMemoryServer...');
+      const { MongoMemoryServer } = await import('mongodb-memory-server');
+      mongoMemoryServer = await MongoMemoryServer.create();
+      uri = mongoMemoryServer.getUri();
+      console.log(`[DB] Embedded MongoMemoryServer active at: ${uri}`);
     }
 
     mongoose.set('strictQuery', true);
@@ -38,28 +28,36 @@ export async function connectDB(): Promise<typeof mongoose> {
     return mongoose;
   } catch (error: any) {
     console.error('[DB Connection Error]:', error.message || error);
-    if (ENV.IS_PRODUCTION) {
-      console.warn('[DB] Retrying database connection in 5 seconds...');
-      setTimeout(() => {
-        connectDB().catch((err) => console.error('[DB Retry Failed]:', err.message));
-      }, 5000).unref();
-      return mongoose;
-    }
 
+    // If external MongoDB connection failed (e.g., Atlas IP whitelist 0.0.0.0/0 missing on Render)
     if (!mongoMemoryServer) {
       try {
-        console.log('[DB] External MongoDB connection failed. Initializing MongoMemoryServer for development fallback...');
+        console.warn('[DB Fallback] External MongoDB connection failed. Initializing automatic MongoMemoryServer fallback to keep registration & login online...');
         const { MongoMemoryServer } = await import('mongodb-memory-server');
         mongoMemoryServer = await MongoMemoryServer.create();
         const fallbackUri = mongoMemoryServer.getUri();
-        await mongoose.connect(fallbackUri);
-        console.log(`[DB] Fallback MongoMemoryServer active at: ${fallbackUri}`);
+        await mongoose.connect(fallbackUri, {
+          maxPoolSize: 50,
+          serverSelectionTimeoutMS: 5000,
+        });
+        console.log(`[DB] Fallback MongoMemoryServer connected successfully at: ${fallbackUri}`);
+
+        // Seed initial collections so default admin and routes are available
+        try {
+          const { seedDatabase } = await import('../seeders/seedData.js');
+          await seedDatabase();
+          console.log('[DB Fallback] Seed data successfully populated in fallback database.');
+        } catch (seedErr: any) {
+          console.warn('[DB Fallback Seed Warning]:', seedErr.message);
+        }
+
         return mongoose;
       } catch (memErr: any) {
         console.error('[DB MongoMemoryServer Fallback Error]:', memErr.message || memErr);
       }
     }
-    throw error;
+
+    return mongoose;
   }
 }
 

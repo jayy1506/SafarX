@@ -175,10 +175,11 @@ export class AuthController {
           verificationStatus: 'PENDING',
         });
 
-        if (vehicleNumber) {
+        const vehNum = vehicleNumber || (req.body as any).vehicleInfo;
+        if (vehNum) {
           await Vehicle.create({
             driver: driverProfile._id,
-            vehicleNumber: vehicleNumber.toUpperCase().trim(),
+            vehicleNumber: String(vehNum).toUpperCase().trim(),
             brand: brand || 'Maruti Suzuki',
             model: model || 'Swift Dzire',
             color: 'White',
@@ -222,11 +223,13 @@ export class AuthController {
 
       const cleanInput = String(emailOrPhone).trim();
       const phoneVariants = getPhoneVariants(cleanInput);
+      const escapedInput = cleanInput.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
       const user = await User.findOne({
         $or: [
           { email: cleanInput.toLowerCase() },
           { phone: { $in: phoneVariants } },
+          { fullName: new RegExp(`^${escapedInput}$`, 'i') },
         ],
       });
 

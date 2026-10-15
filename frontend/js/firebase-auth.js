@@ -120,7 +120,7 @@ export const FirebaseAuth = {
     State.clearUser();
     localStorage.removeItem('sawangi_token');
     localStorage.removeItem('sawangi_active_role');
-    window.location.href = '/login.html';
+    window.location.href = '/login.html?logout=true';
   },
 };
 
