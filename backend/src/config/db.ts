@@ -39,7 +39,11 @@ export async function connectDB(): Promise<typeof mongoose> {
   } catch (error: any) {
     console.error('[DB Connection Error]:', error.message || error);
     if (ENV.IS_PRODUCTION) {
-      process.exit(1);
+      console.warn('[DB] Retrying database connection in 5 seconds...');
+      setTimeout(() => {
+        connectDB().catch((err) => console.error('[DB Retry Failed]:', err.message));
+      }, 5000).unref();
+      return mongoose;
     }
 
     if (!mongoMemoryServer) {

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Razorpay Standard Web Checkout — SafarX</title>
+  <meta name="description" content="SafarX Razorpay Standard Web Checkout Integration Test Page" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/design-system.css" />
+  <!-- Razorpay Official Checkout SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    body {
+      background: #FAFAFA;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .checkout-container {
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      width: 100%;
+    }
+    .status-card {
+      background: white;
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      margin-top: 1.25rem;
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      display: none;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      border-radius: var(--radius-full);
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .status-badge.loading { background: #E0F2FE; color: #0369A1; }
+    .status-badge.success { background: #DCFCE7; color: #15803D; }
+    .status-badge.error { background: #FEE2E2; color: #B91C1C; }
+    .status-badge.warning { background: #FEF3C7; color: #B45309; }
+    .step-indicator {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .step-pill {
+      flex: 1;
+      padding: 0.5rem;
+      background: #F3F4F6;
+      border-radius: var(--radius-sm);
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-align: center;
+      color: var(--text-light);
+      transition: all 0.2s ease;
+    }
+    .step-pill.active {
+      background: var(--orange-light);
+      color: var(--orange);
+      border: 1px solid rgba(255,107,0,0.3);
+    }
+    .step-pill.done {
+      background: #DCFCE7;
+      color: #166534;
+    }
+    pre.code-preview {
+      background: #1E293B;
+      color: #F8FAFC;
+      padding: 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      overflow-x: auto;
+      margin-top: 0.5rem;
+      max-height: 200px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-logo" onclick="window.location.href='/'" style="cursor:pointer;">
+      <div class="brand-badge">⚡</div>
+      <span>Safar<strong style="color:var(--orange);">X</strong></span>
+      <span class="brand-route-tag">Razorpay Standard Checkout</span>
+    </div>
+    <div style="display:flex; gap:0.5rem;">
+      <a href="/" class="btn btn-sm btn-secondary">🏠 Home</a>
+    </div>
+  </header>
+
+  <!-- Main Checkout Container -->
+  <main class="checkout-container">
+
+    <div class="card" style="border-top: 4px solid var(--orange); box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 2.2rem; margin-bottom: 0.3rem;">💳</div>
+        <h1 style="font-size: 1.35rem; font-weight: 900; color: var(--text-dark); margin-bottom: 0.25rem;">
+          Razorpay Standard Web Checkout
+        </h1>
+        <p style="font-size: 0.82rem; color: var(--text-light);">
+          End-to-End Order Creation &amp; Cryptographic Signature Verification
+        </p>
+      </div>
+
+      <!-- Steps Indicator -->
+      <div class="step-indicator">
+        <div id="step-pill-1" class="step-pill active">1. Create Order</div>
+        <div id="step-pill-2" class="step-pill">2. Modal Checkout</div>
+        <div id="step-pill-3" class="step-pill">3. Verify Signature</div>
+      </div>
+
+      <!-- Quick Preset Amounts -->
+      <div class="form-group">
+        <label class="form-label">Preset Amounts:</label>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button type="button" class="btn btn-sm btn-secondary amt-preset-btn" data-paise="100">₹1 (100 paise - Min)</button>
+          <button type="button" class="btn btn-sm btn-secondary amt-preset-btn" data-paise="3000">₹30 (3000 paise - Ride)</button>
+          <button type="button" class="btn btn-sm btn-secondary amt-preset-btn" data-paise="5000">₹50 (5000 paise)</button>
+          <button type="button" class="btn btn-sm btn-secondary amt-preset-btn" data-paise="10000">₹100 (10000 paise)</button>
+        </div>
+      </div>
+
+      <!-- Custom Amount in Paise -->
+      <div class="form-group">
+        <label class="form-label" for="amount-paise-input">Amount in Paise (Minimum 100 paise = ₹1.00):</label>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <input
+            type="number"
+            id="amount-paise-input"
+            class="form-input"
+            value="100"
+            min="100"
+            step="100"
+            required
+            placeholder="100"
+            style="font-size:1.1rem; font-weight:700;"
+          />
+          <span id="amount-inr-display" style="white-space:nowrap; font-weight:800; color:var(--orange); font-size:1.1rem;">
+            = ₹1.00
+          </span>
+        </div>
+      </div>
+
+      <!-- Customer Details (Optional) -->
+      <div class="form-group">
+        <label class="form-label" for="customer-name-input">Customer Name:</label>
+        <input type="text" id="customer-name-input" class="form-input" value="SafarX Passenger" placeholder="Passenger Name" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="customer-email-input">Customer Email:</label>
+        <input type="email" id="customer-email-input" class="form-input" value="passenger@safarx.in" placeholder="passenger@safarx.in" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="customer-phone-input">Customer Phone:</label>
+        <input type="tel" id="customer-phone-input" class="form-input" value="9876543210" placeholder="9876543210" />
+      </div>
+
+      <!-- Action Button -->
+      <button id="pay-now-btn" class="btn btn-primary btn-block" style="padding: 0.9rem; font-size: 1rem; font-weight: 800; margin-top: 1rem;">
+        💳 Pay with Razorpay Standard Checkout
+      </button>
+
+      <!-- Live Transaction Status Display -->
+      <div id="status-card" class="status-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <h3 id="status-heading" style="font-size: 0.95rem; font-weight: 800;">Processing Checkout</h3>
+          <span id="status-badge" class="status-badge loading">In Progress</span>
+        </div>
+        <p id="status-description" style="font-size: 0.82rem; color: var(--text-dark); margin-bottom: 0.5rem;"></p>
+        <div id="status-details"></div>
+      </div>
+
+    </div>
+
+    <!-- Integration Specs Overview -->
+    <div class="card" style="margin-top: 1.5rem; background: var(--cream); border: 1px dashed var(--orange);">
+      <h3 style="font-size: 0.9rem; font-weight: 800; margin-bottom: 0.4rem; color: var(--text-dark);">
+        ⚙️ Endpoints Verified in this Flow:
+      </h3>
+      <ul style="font-size: 0.8rem; color: var(--text-light); padding-left: 1.2rem; line-height: 1.6;">
+        <li><code>POST /api/create-order</code> — Invokes Razorpay Orders API with amount &ge; 100 paise</li>
+        <li><code>Razorpay Checkout Modal</code> — Standard client iframe modal with <code>order_id</code></li>
+        <li><code>POST /api/verify-payment</code> — Server validates <code>HMAC-SHA256(order_id + "|" + payment_id, SECRET)</code></li>
+      </ul>
+    </div>
+
+  </main>
+
+  <!-- Toast notification container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- JavaScript Module -->
+  <script type="module">
+    import { initiateRazorpayCheckout } from '/js/razorpay-checkout.js';
+
+    // Elements
+    const amountInput = document.getElementById('amount-paise-input');
+    const amountDisplay = document.getElementById('amount-inr-display');
+    const payBtn = document.getElementById('pay-now-btn');
+    const statusCard = document.getElementById('status-card');
+    const statusHeading = document.getElementById('status-heading');
+    const statusBadge = document.getElementById('status-badge');
+    const statusDesc = document.getElementById('status-description');
+    const statusDetails = document.getElementById('status-details');
+    const pill1 = document.getElementById('step-pill-1');
+    const pill2 = document.getElementById('step-pill-2');
+    const pill3 = document.getElementById('step-pill-3');
+
+    // Update INR calculation
+    amountInput.addEventListener('input', () => {
+      const paise = Number(amountInput.value) || 0;
+      amountDisplay.textContent = `= ₹${(paise / 100).toFixed(2)}`;
+    });
+
+    // Preset buttons
+    document.querySelectorAll('.amt-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const paise = btn.getAttribute('data-paise');
+        amountInput.value = paise;
+        amountDisplay.textContent = `= ₹${(paise / 100).toFixed(2)}`;
+      });
+    });
+
+    function setStep(step) {
+      pill1.className = 'step-pill' + (step === 1 ? ' active' : (step > 1 ? ' done' : ''));
+      pill2.className = 'step-pill' + (step === 2 ? ' active' : (step > 2 ? ' done' : ''));
+      pill3.className = 'step-pill' + (step === 3 ? ' active' : (step > 3 ? ' done' : ''));
+    }
+
+    function showStatus(type, heading, message, codeObj = null) {
+      statusCard.style.display = 'block';
+      statusBadge.className = `status-badge ${type}`;
+      statusBadge.textContent = type === 'loading' ? 'In Progress' : (type === 'success' ? 'Success' : (type === 'warning' ? 'Cancelled' : 'Error'));
+      statusHeading.textContent = heading;
+      statusDesc.textContent = message;
+
+      if (codeObj) {
+        statusDetails.innerHTML = `<pre class="code-preview">${JSON.stringify(codeObj, null, 2)}</pre>`;
+      } else {
+        statusDetails.innerHTML = '';
+      }
+    }
+
+    payBtn.addEventListener('click', async () => {
+      const amountInPaise = parseInt(amountInput.value, 10);
+      if (!amountInPaise || amountInPaise < 100) {
+        alert('Validation error: Amount must be at least 100 paise (₹1.00).');
+        return;
+      }
+
+      const name = document.getElementById('customer-name-input').value.trim() || 'SafarX Passenger';
+      const email = document.getElementById('customer-email-input').value.trim() || 'passenger@safarx.in';
+      const contact = document.getElementById('customer-phone-input').value.trim() || '9876543210';
+
+      setStep(1);
+      showStatus('loading', 'Step 1: Creating Razorpay Order', `Sending POST /api/create-order for ${amountInPaise} paise (₹${(amountInPaise/100).toFixed(2)})...`);
+
+      payBtn.disabled = true;
+
+      await initiateRazorpayCheckout({
+        amount: amountInPaise,
+        currency: 'INR',
+        name: 'SafarX Mobility',
+        description: 'Standard Checkout Ride Payment',
+        prefill: { name, email, contact },
+        themeColor: '#FF6B00',
+        onSuccess: (result) => {
+          setStep(3);
+          pill3.className = 'step-pill done';
+          showStatus(
+            'success',
+            '🎉 Payment Verified Successfully!',
+            'Cryptographic HMAC-SHA256 signature matched perfectly. Server verified payment.',
+            result
+          );
+          payBtn.disabled = false;
+        },
+        onFailure: (error) => {
+          showStatus(
+            'error',
+            '❌ Payment or Verification Failed',
+            error.message || 'Payment failed or declined',
+            { error: error.message }
+          );
+          payBtn.disabled = false;
+        },
+        onDismiss: () => {
+          showStatus(
+            'warning',
+            '⚠️ Checkout Dismissed by User',
+            'The Razorpay payment modal was closed before completing payment.'
+          );
+          payBtn.disabled = false;
+        }
+      });
+
+      setStep(2);
+    });
+  </script>
+</body>
+</html>

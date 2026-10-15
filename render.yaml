@@ -2,6 +2,39 @@ services:
   - type: web
     name: safarx
     runtime: node
+    plan: starter
+    region: singapore # Closest low-latency region to India / Wardha
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: USE_IN_MEMORY_DB
+        value: "false"
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: UPSTASH_VECTOR_REST_URL
+        sync: false
+      - key: UPSTASH_VECTOR_REST_TOKEN
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        value: safarx-513ce
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false

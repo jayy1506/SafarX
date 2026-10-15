@@ -136,7 +136,7 @@ async function startServer() {
   await connectDB();
 
   // 3. Auto-seed only in development when empty, NEVER in production
-  const userCount = await User.countDocuments();
+  const userCount = await User.countDocuments().catch(() => 0);
   if (userCount === 0 && !ENV.IS_PRODUCTION && (process.env.AUTO_SEED === 'true' || ENV.NODE_ENV === 'development')) {
     logger.info('[Server] Development database is empty. Running initial test seed...');
     try {

@@ -21,6 +21,9 @@
   "author": "SawangiRide Architecture Team",
   "license": "ISC",
   "dependencies": {
+    "@upstash/ratelimit": "^2.2.0",
+    "@upstash/redis": "^1.39.0",
+    "@upstash/vector": "^1.2.3",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

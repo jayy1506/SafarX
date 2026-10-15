@@ -91,4 +91,46 @@ router.get('/ready', async (req: Request, res: Response) => {
   }
 });
 
+import { redis, vectorIndex } from '../config/upstash.js';
+
+/**
+ * @route   GET /api/health/upstash
+ * @desc    Verify Upstash Redis (set/get) and Upstash Vector connectivity
+ * @access  Public
+ */
+router.get('/upstash', async (req: Request, res: Response) => {
+  const start = Date.now();
+  try {
+    // 1. Redis test: set "foo" -> "bar" and get "foo"
+    await redis.set('foo', 'bar');
+    const redisVal = await redis.get('foo');
+
+    // 2. Vector test: get vector index info
+    const vectorInfo = await vectorIndex.info();
+
+    res.status(200).json({
+      status: 'ok',
+      service: 'upstash-integration',
+      redis: {
+        status: 'connected',
+        testKey: 'foo',
+        testValue: redisVal,
+        verified: redisVal === 'bar',
+      },
+      vector: {
+        status: 'connected',
+        indexInfo: vectorInfo,
+      },
+      latencyMs: Date.now() - start,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      status: 'error',
+      message: err.message,
+      latencyMs: Date.now() - start,
+    });
+  }
+});
+
 export default router;

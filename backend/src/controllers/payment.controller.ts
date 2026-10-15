@@ -213,7 +213,12 @@ export class PaymentController {
         });
       } catch (err: any) {
         logger.error({ error: err?.message || err }, '[Razorpay API] Error creating order');
-        if (err.statusCode === 401 || (err?.error?.code === 'BAD_REQUEST_ERROR' && String(err?.message || '').toLowerCase().includes('auth'))) {
+        if (
+          err.statusCode === 401 ||
+          err?.status === 401 ||
+          (err?.error?.code === 'BAD_REQUEST_ERROR' &&
+            String(err?.message || err?.error?.description || '').toLowerCase().includes('auth'))
+        ) {
           res.status(401).json({
             success: false,
             message: 'Razorpay authentication failed: invalid credentials.',
@@ -235,7 +240,7 @@ export class PaymentController {
           return;
         }
 
-        res.status(err.statusCode || 500).json({
+        res.status(500).json({
           success: false,
           message: err?.error?.description || err.message || 'Failed to create Razorpay order',
         });

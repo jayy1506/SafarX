@@ -34,6 +34,28 @@ export const CustomerApp = {
     if (reviewForm) {
       reviewForm.addEventListener('submit', (e) => this.handleSubmitReview(e));
     }
+
+    const dashboardPayBtn = document.getElementById('dashboard-rzp-pay-btn');
+    if (dashboardPayBtn) {
+      dashboardPayBtn.addEventListener('click', async () => {
+        const amtInput = document.getElementById('dashboard-rzp-amount');
+        const amount = parseInt(amtInput ? amtInput.value : '100', 10) || 100;
+        if (amount < 100) {
+          window.SawangiApp?.showToast('Minimum amount is 100 paise (₹1.00)', 'error');
+          return;
+        }
+        if (window.payWithRazorpay) {
+          await window.payWithRazorpay({ amount });
+        }
+      });
+    }
+
+    document.querySelectorAll('.rzp-demo-amt').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const amtInput = document.getElementById('dashboard-rzp-amount');
+        if (amtInput) amtInput.value = btn.getAttribute('data-paise');
+      });
+    });
   },
 
   async loadRoutesAndStops() {
