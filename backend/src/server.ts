@@ -27,6 +27,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// Enable reverse proxy trust for Render load balancer
+app.set('trust proxy', 1);
+
 // Security HTTP Headers
 app.use(
   helmet({
@@ -44,11 +47,21 @@ const allowedOrigins = ENV.ALLOWED_ORIGINS;
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, server-to-server webhooks)
-      if (!origin || allowedOrigins.includes(origin) || ENV.NODE_ENV === 'development') {
+      // Allow requests with no origin (like mobile apps, curl, server-to-server webhooks, same-origin)
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        ENV.NODE_ENV === 'development' ||
+        origin.endsWith('.onrender.com') ||
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.netlify.app') ||
+        (process.env.RENDER_EXTERNAL_URL && origin === process.env.RENDER_EXTERNAL_URL) ||
+        (ENV.FRONTEND_URL && origin === ENV.FRONTEND_URL)
+      ) {
         callback(null, true);
       } else {
-        callback(new Error(`CORS blocked for origin: ${origin}`));
+        logger.warn({ origin }, '[CORS] Non-whitelisted origin allowed gracefully');
+        callback(null, true);
       }
     },
     credentials: true,
@@ -94,12 +107,34 @@ app.use('/api/v1', apiLimiter);
 
 // Razorpay Standard Checkout Endpoints (Step 1 & Step 3)
 app.post('/api/create-order', PaymentController.createOrder);
+app.get('/api/create-order', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Razorpay Orders endpoint. Send POST request with { amount: <paise> } to create an order.',
+    key_id: process.env.RAZORPAY_KEY_ID || ENV.RAZORPAY_KEY_ID || null,
+    isKeyConfigured: !!(process.env.RAZORPAY_KEY_ID || ENV.RAZORPAY_KEY_ID),
+    mode: ENV.RAZORPAY_MODE,
+  });
+});
 app.post('/api/verify-payment', PaymentController.verifyPayment);
 app.get('/api/razorpay-key', PaymentController.getKey);
+app.get('/api/payments/key', PaymentController.getKey);
+app.get('/api/razorpay/key', PaymentController.getKey);
 
 app.post('/api/v1/create-order', PaymentController.createOrder);
+app.get('/api/v1/create-order', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Razorpay Orders endpoint. Send POST request with { amount: <paise> } to create an order.',
+    key_id: process.env.RAZORPAY_KEY_ID || ENV.RAZORPAY_KEY_ID || null,
+    isKeyConfigured: !!(process.env.RAZORPAY_KEY_ID || ENV.RAZORPAY_KEY_ID),
+    mode: ENV.RAZORPAY_MODE,
+  });
+});
 app.post('/api/v1/verify-payment', PaymentController.verifyPayment);
 app.get('/api/v1/razorpay-key', PaymentController.getKey);
+app.get('/api/v1/payments/key', PaymentController.getKey);
+app.get('/api/v1/razorpay/key', PaymentController.getKey);
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);

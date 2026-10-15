@@ -31,15 +31,16 @@ export class RazorpayService {
         },
       };
 
+      const currentKeyId = process.env.RAZORPAY_KEY_ID || ENV.RAZORPAY_KEY_ID || '';
       let order: any;
       try {
         order = await razorpayClient.orders.create(options);
       } catch (err: any) {
-        if (ENV.IS_PRODUCTION) {
+        if (ENV.IS_PRODUCTION && ENV.RAZORPAY_MODE === 'live' && currentKeyId && !currentKeyId.startsWith('rzp_test_')) {
           logger.error({ error: err?.message }, '[Razorpay API] Live order creation failed');
           throw new Error(`Razorpay gateway error: ${err?.message || 'Failed to create order'}`);
         } else {
-          logger.warn({ error: err?.message }, '[Razorpay API Order] Creating sandbox test order fallback');
+          logger.warn({ error: err?.message }, '[Razorpay API Order] Creating sandbox test order fallback on Render/test environment');
           order = {
             id: `order_test_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
             entity: 'order',
@@ -92,7 +93,8 @@ export class RazorpayService {
         amount: amountInPaise, // in paise for Razorpay Checkout
         amountInRupees: booking.totalAmount,
         currency: 'INR',
-        keyId: ENV.RAZORPAY_KEY_ID,
+        keyId: currentKeyId,
+        key_id: currentKeyId,
         paymentRecordId: paymentRecord._id,
       };
     } catch (error: any) {

@@ -269,8 +269,26 @@ export const CustomerApp = {
       user = JSON.parse(localStorage.getItem('sawangi_user') || '{}');
     } catch {}
 
+    let keyId = paymentOrder.keyId || paymentOrder.key_id;
+    if (!keyId) {
+      try {
+        const keyRes = await fetch('/api/razorpay-key');
+        if (keyRes.ok) {
+          const keyData = await keyRes.json();
+          keyId = keyData.key_id || keyData.keyId;
+        }
+      } catch (e) {
+        console.warn('[Customer Checkout] Fallback key fetch failed:', e);
+      }
+    }
+
+    if (!keyId) {
+      window.SawangiApp?.showToast('Razorpay Key ID is not configured on server. Please set RAZORPAY_KEY_ID in Render settings.', 'error');
+      return;
+    }
+
     const options = {
-      key: paymentOrder.keyId || paymentOrder.key_id,
+      key: keyId,
       amount: paymentOrder.amount, // in integer paise
       currency: paymentOrder.currency || 'INR',
       name: 'SafarX Mobility',

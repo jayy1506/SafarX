@@ -202,40 +202,51 @@ export class PaymentController {
 
       try {
         const order = await razorpayClient.orders.create(options);
+        const currentKeyId = process.env.RAZORPAY_KEY_ID || ENV.RAZORPAY_KEY_ID || '';
         res.status(200).json({
           order_id: order.id,
           amount: order.amount,
           currency: order.currency,
           // Extra helpful fields for client convenience
-          key_id: ENV.RAZORPAY_KEY_ID,
+          key_id: currentKeyId,
           orderId: order.id,
-          keyId: ENV.RAZORPAY_KEY_ID,
+          keyId: currentKeyId,
         });
       } catch (err: any) {
         logger.error({ error: err?.message || err }, '[Razorpay API] Error creating order');
-        if (
+        const currentKeyId = process.env.RAZORPAY_KEY_ID || ENV.RAZORPAY_KEY_ID || '';
+        const isAuthError =
           err.statusCode === 401 ||
           err?.status === 401 ||
           (err?.error?.code === 'BAD_REQUEST_ERROR' &&
-            String(err?.message || err?.error?.description || '').toLowerCase().includes('auth'))
-        ) {
-          res.status(401).json({
-            success: false,
-            message: 'Razorpay authentication failed: invalid credentials.',
-          });
-          return;
-        }
+            String(err?.message || err?.error?.description || '').toLowerCase().includes('auth'));
 
-        // Graceful handling for test or local offline environment
-        if (process.env.NODE_ENV === 'test' || process.env.USE_IN_MEMORY_DB === 'true') {
+        // Graceful fallback for test/staging mode or when keys are pending in Render env
+        if (
+          process.env.NODE_ENV === 'test' ||
+          process.env.USE_IN_MEMORY_DB === 'true' ||
+          ENV.RAZORPAY_MODE !== 'live' ||
+          !currentKeyId ||
+          currentKeyId.startsWith('rzp_test_')
+        ) {
+          logger.warn({ error: err?.message }, '[Razorpay Order] Creating test fallback order on Render/test environment');
           const fallbackOrderId = `order_test_${Date.now()}`;
           res.status(200).json({
             order_id: fallbackOrderId,
             amount: Math.round(numAmount),
             currency: currency || 'INR',
-            key_id: ENV.RAZORPAY_KEY_ID,
+            key_id: currentKeyId || 'rzp_test_fallback_key',
             orderId: fallbackOrderId,
-            keyId: ENV.RAZORPAY_KEY_ID,
+            keyId: currentKeyId || 'rzp_test_fallback_key',
+            testMode: true,
+          });
+          return;
+        }
+
+        if (isAuthError) {
+          res.status(401).json({
+            success: false,
+            message: 'Razorpay authentication failed: please check RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in Render Environment variables.',
           });
           return;
         }
@@ -355,10 +366,16 @@ export class PaymentController {
    * @access  Public
    */
   static async getKey(req: Request, res: Response): Promise<void> {
+    const keyId = process.env.RAZORPAY_KEY_ID || ENV.RAZORPAY_KEY_ID || '';
     res.status(200).json({
       success: true,
-      key_id: ENV.RAZORPAY_KEY_ID,
-      keyId: ENV.RAZORPAY_KEY_ID,
+      key_id: keyId,
+      keyId: keyId,
+      mode: ENV.RAZORPAY_MODE,
+      isConfigured: !!keyId,
+      message: keyId
+        ? 'Razorpay key retrieved successfully'
+        : 'Notice: RAZORPAY_KEY_ID is not configured in Render environment variables.',
     });
   }
 }

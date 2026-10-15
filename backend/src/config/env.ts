@@ -69,6 +69,7 @@ export const ENV: EnvironmentConfig = {
         'https://app.safarx.in',
         'https://admin.safarx.in',
         'https://driver.safarx.in',
+        ...(process.env.RENDER_EXTERNAL_URL ? [process.env.RENDER_EXTERNAL_URL] : []),
       ],
   FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || 'safarx-513ce',
   FIREBASE_SERVICE_ACCOUNT: process.env.FIREBASE_SERVICE_ACCOUNT || '',

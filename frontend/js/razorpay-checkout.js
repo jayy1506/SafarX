@@ -66,7 +66,23 @@ export async function initiateRazorpayCheckout(options = {}) {
     }
 
     const orderId = orderData.order_id;
-    const keyId = orderData.key_id || orderData.keyId;
+    let keyId = orderData.key_id || orderData.keyId;
+
+    if (!keyId) {
+      try {
+        const keyRes = await fetch('/api/razorpay-key');
+        if (keyRes.ok) {
+          const keyData = await keyRes.json();
+          keyId = keyData.key_id || keyData.keyId;
+        }
+      } catch (e) {
+        console.warn('[Razorpay Checkout] Fallback key fetch failed:', e);
+      }
+    }
+
+    if (!keyId) {
+      throw new Error('Razorpay Key ID is not configured on the server. Please add RAZORPAY_KEY_ID in Render Environment variables.');
+    }
 
     let user = {};
     try {
