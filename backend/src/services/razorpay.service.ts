@@ -131,10 +131,12 @@ export class RazorpayService {
    */
   static verifyClientSignature(orderId: string, paymentId: string, signature: string): boolean {
     if (!orderId || !paymentId || !signature) return false;
+
     try {
+      const secret = (process.env.RAZORPAY_KEY_SECRET || ENV.RAZORPAY_KEY_SECRET || '').trim().replace(/^["']|["']$/g, '');
       const payload = `${orderId}|${paymentId}`;
       const expectedSignature = crypto
-        .createHmac('sha256', ENV.RAZORPAY_KEY_SECRET)
+        .createHmac('sha256', secret)
         .update(payload)
         .digest('hex');
 

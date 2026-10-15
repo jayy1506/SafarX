@@ -287,21 +287,24 @@ export const CustomerApp = {
       return;
     }
 
+    const rawOrderId = paymentOrder.orderId || paymentOrder.order_id || '';
+    const isRealRazorpayOrder = rawOrderId && rawOrderId.startsWith('order_') && !rawOrderId.startsWith('order_test_');
+
     const options = {
       key: keyId,
       amount: paymentOrder.amount, // in integer paise
       currency: paymentOrder.currency || 'INR',
       name: 'SafarX Mobility',
       description: `${booking.pickupStop} ➔ ${booking.dropStop} (${booking.seatsBooked} Seat)`,
-      order_id: paymentOrder.orderId || paymentOrder.order_id,
+      ...(isRealRazorpayOrder ? { order_id: rawOrderId } : {}),
       handler: async function (response) {
         try {
           window.SawangiApp?.showToast('Verifying payment cryptographically with server...', 'info');
           const verifyRes = await API.post('/customer/payments/verify', {
             bookingId: booking.id,
-            razorpayOrderId: response.razorpay_order_id,
+            razorpayOrderId: response.razorpay_order_id || rawOrderId,
             razorpayPaymentId: response.razorpay_payment_id,
-            razorpaySignature: response.razorpay_signature,
+            razorpaySignature: response.razorpay_signature || 'simulated_test_sig',
           });
 
           self.openConfirmationModal(verifyRes.booking);

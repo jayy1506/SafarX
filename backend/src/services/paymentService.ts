@@ -21,7 +21,10 @@ export class PaymentService {
   ) {
     const isValid = RazorpayService.verifyClientSignature(razorpayOrderId, razorpayPaymentId, razorpaySignature);
 
-    const payment = await Payment.findOne({ razorpayOrderId });
+    let payment = await Payment.findOne({ razorpayOrderId });
+    if (!payment && bookingId) {
+      payment = await Payment.findOne({ booking: bookingId });
+    }
     if (!payment) {
       throw new Error('Payment record for this order not found');
     }

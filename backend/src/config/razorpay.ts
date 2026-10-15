@@ -1,10 +1,10 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
-import { ENV } from './env.js';
+import { ENV, cleanEnvStr } from './env.js';
 
 function createClient(): Razorpay {
-  const key_id = process.env.RAZORPAY_KEY_ID || ENV.RAZORPAY_KEY_ID || 'rzp_test_placeholder';
-  const key_secret = process.env.RAZORPAY_KEY_SECRET || ENV.RAZORPAY_KEY_SECRET || 'placeholder_secret';
+  const key_id = cleanEnvStr(process.env.RAZORPAY_KEY_ID) || ENV.RAZORPAY_KEY_ID || 'rzp_test_placeholder';
+  const key_secret = cleanEnvStr(process.env.RAZORPAY_KEY_SECRET) || ENV.RAZORPAY_KEY_SECRET || 'placeholder_secret';
   return new Razorpay({ key_id, key_secret });
 }
 

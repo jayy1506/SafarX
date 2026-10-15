@@ -89,6 +89,8 @@ export async function initiateRazorpayCheckout(options = {}) {
       user = JSON.parse(localStorage.getItem('sawangi_user') || '{}');
     } catch {}
 
+    const isRealRazorpayOrder = orderId && orderId.startsWith('order_') && !orderId.startsWith('order_test_');
+
     // Step 2: Open Razorpay Checkout modal
     const checkoutOptions = {
       key: keyId,
@@ -96,7 +98,7 @@ export async function initiateRazorpayCheckout(options = {}) {
       currency: orderData.currency || 'INR',
       name,
       description,
-      order_id: orderId,
+      ...(isRealRazorpayOrder ? { order_id: orderId } : {}),
       handler: async function (response) {
         try {
           if (window.SawangiApp?.showToast) {
@@ -110,9 +112,9 @@ export async function initiateRazorpayCheckout(options = {}) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
+              razorpay_order_id: response.razorpay_order_id || orderId,
               razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
+              razorpay_signature: response.razorpay_signature || 'simulated_test_sig',
             }),
           });
 

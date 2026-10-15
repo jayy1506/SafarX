@@ -282,16 +282,8 @@ export class PaymentController {
         return;
       }
 
-      // Algorithm: HMAC-SHA256(order_id + "|" + payment_id, KEY_SECRET)
-      const payload = `${orderId}|${paymentId}`;
-      const expectedSignature = crypto
-        .createHmac('sha256', ENV.RAZORPAY_KEY_SECRET)
-        .update(payload)
-        .digest('hex');
-
-      const expectedBuf = Buffer.from(expectedSignature, 'utf8');
-      const actualBuf = Buffer.from(signature, 'utf8');
-      const isValid = expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf);
+      // Use RazorpayService signature verification
+      const isValid = RazorpayService.verifyClientSignature(orderId, paymentId, signature);
 
       if (!isValid) {
         // If payment record exists, mark as FAILED (do NOT mark as paid)

@@ -47,6 +47,11 @@ if (!resolvedJwtSecret || resolvedJwtSecret.length < 32 || placeholderSecrets.in
   }
 }
 
+export function cleanEnvStr(val?: string): string {
+  if (!val) return '';
+  return val.trim().replace(/^["']|["']$/g, '').trim();
+}
+
 export const ENV: EnvironmentConfig = {
   PORT: process.env.PORT ? parseInt(process.env.PORT, 10) : 5000,
   NODE_ENV: (nodeEnv as any) || 'development',
@@ -54,9 +59,9 @@ export const ENV: EnvironmentConfig = {
   USE_IN_MEMORY_DB: process.env.USE_IN_MEMORY_DB === 'true',
   JWT_SECRET: resolvedJwtSecret,
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
-  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || '',
-  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || '',
-  RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || 'rzp_whsec_safarx_prod_default_key',
+  RAZORPAY_KEY_ID: cleanEnvStr(process.env.RAZORPAY_KEY_ID),
+  RAZORPAY_KEY_SECRET: cleanEnvStr(process.env.RAZORPAY_KEY_SECRET),
+  RAZORPAY_WEBHOOK_SECRET: cleanEnvStr(process.env.RAZORPAY_WEBHOOK_SECRET) || 'rzp_whsec_safarx_prod_default_key',
   RAZORPAY_MODE: (process.env.RAZORPAY_MODE === 'live' ? 'live' : 'test'),
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5000',
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS
